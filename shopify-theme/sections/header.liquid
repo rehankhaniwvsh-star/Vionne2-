@@ -1,0 +1,73 @@
+<header class="site-header sticky-header">
+  <div class="container header-container">
+    <nav class="main-nav">
+      {% for link in linklists.main-menu.links %}
+        <a href="{{ link.url }}" class="nav-link">{{ link.title }}</a>
+      {% endfor %}
+    </nav>
+    
+    <div class="site-logo">
+      <a href="/">VIONNE</a>
+    </div>
+
+    <div class="header-icons">
+      <a href="/search" class="icon-link">{% render 'icon-search' %}</a>
+      <a href="/cart" class="icon-link relative">
+        {% render 'icon-cart' %}
+        {% if cart.item_count > 0 %}
+          <span class="cart-count">{{ cart.item_count }}</span>
+        {% endif %}
+      </a>
+    </div>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    background: #fff;
+    padding: 20px 0;
+    border-bottom: 1px solid #eee;
+  }
+  .header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .main-nav {
+    display: flex;
+    gap: 30px;
+  }
+  .nav-link {
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    text-decoration: none;
+    color: #000;
+  }
+  .site-logo a {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    letter-spacing: -0.05em;
+    text-decoration: none;
+    color: #000;
+  }
+  .header-icons {
+    display: flex;
+    gap: 20px;
+  }
+  .cart-count {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #000;
+    color: #fff;
+    font-size: 10px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+</style>

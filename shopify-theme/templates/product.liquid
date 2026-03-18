@@ -1,0 +1,60 @@
+<div class="product-page container">
+  <div class="product-grid">
+    <div class="product-media">
+      <img src="{{ product.featured_image | img_url: '1000x' }}" alt="{{ product.title }}">
+    </div>
+    <div class="product-info">
+      <p class="product-vendor">{{ product.vendor }}</p>
+      <h1 class="product-title">{{ product.title }}</h1>
+      <p class="product-price">{{ product.price | money }}</p>
+      
+      <div class="product-description">
+        {{ product.description }}
+      </div>
+
+      {% form 'product', product %}
+        <select name="id">
+          {% for variant in product.variants %}
+            <option value="{{ variant.id }}">{{ variant.title }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn-add-to-cart">Add to Cart</button>
+      {% endform %}
+
+      <div class="trust-badges">
+        <p>🚚 Free Shipping on All Orders</p>
+        <p>🔄 30-Day Easy Returns</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .product-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    padding: 80px 0;
+  }
+  .product-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    margin-bottom: 10px;
+  }
+  .product-price {
+    font-size: 24px;
+    margin-bottom: 30px;
+  }
+  .btn-add-to-cart {
+    width: 100%;
+    background: #000;
+    color: #fff;
+    padding: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-weight: 700;
+    border: none;
+    margin-top: 30px;
+    cursor: pointer;
+  }
+</style>

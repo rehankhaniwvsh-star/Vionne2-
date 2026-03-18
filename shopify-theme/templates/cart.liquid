@@ -1,0 +1,68 @@
+<div class="cart-page container">
+  <h1>Your Cart</h1>
+  
+  {% if cart.item_count > 0 %}
+    <form action="/cart" method="post" novalidate>
+      <div class="cart-items">
+        {% for item in cart.items %}
+          <div class="cart-item">
+            <div class="cart-item-image">
+              <img src="{{ item | img_url: 'medium' }}" alt="{{ item.title }}">
+            </div>
+            <div class="cart-item-info">
+              <h3>{{ item.product.title }}</h3>
+              <p>{{ item.variant.title }}</p>
+              <p>{{ item.price | money }}</p>
+            </div>
+            <div class="cart-item-quantity">
+              <input type="number" name="updates[]" value="{{ item.quantity }}" min="0">
+            </div>
+            <div class="cart-item-total">
+              {{ item.line_price | money }}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      
+      <div class="cart-footer">
+        <p>Subtotal: {{ cart.total_price | money }}</p>
+        <button type="submit" name="checkout" class="btn-checkout">Checkout</button>
+      </div>
+    </form>
+  {% else %}
+    <p>Your cart is empty.</p>
+    <a href="/collections/all">Continue Shopping</a>
+  {% endif %}
+</div>
+
+<style>
+  .cart-page {
+    padding: 80px 0;
+  }
+  .cart-page h1 {
+    font-family: 'Playfair Display', serif;
+    margin-bottom: 40px;
+  }
+  .cart-item {
+    display: grid;
+    grid-template-columns: 100px 1fr 100px 100px;
+    gap: 30px;
+    align-items: center;
+    padding: 20px 0;
+    border-bottom: 1px solid #eee;
+  }
+  .cart-footer {
+    text-align: right;
+    margin-top: 40px;
+  }
+  .btn-checkout {
+    background: #000;
+    color: #fff;
+    padding: 15px 40px;
+    border: none;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-weight: 700;
+    cursor: pointer;
+  }
+</style>

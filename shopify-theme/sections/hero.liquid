@@ -1,0 +1,80 @@
+<section class="hero-section" style="background-image: url('{{ section.settings.image | img_url: 'master' }}');">
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <span class="hero-subtitle">{{ section.settings.subtitle }}</span>
+    <h1 class="hero-title">{{ section.settings.title }}</h1>
+    <p class="hero-text">{{ section.settings.text }}</p>
+    <a href="{{ section.settings.button_link }}" class="btn-primary">{{ section.settings.button_label }}</a>
+  </div>
+</section>
+
+<style>
+  .hero-section {
+    height: 90vh;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 5%;
+  }
+  .hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.1);
+  }
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    max-width: 600px;
+    color: #000;
+  }
+  .hero-subtitle {
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+  .hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 72px;
+    line-height: 1.1;
+    margin-bottom: 30px;
+  }
+  .hero-text {
+    font-size: 18px;
+    margin-bottom: 40px;
+    opacity: 0.8;
+  }
+  .btn-primary {
+    background: #000;
+    color: #fff;
+    padding: 15px 40px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-weight: 700;
+    font-size: 12px;
+    text-decoration: none;
+    display: inline-block;
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Hero",
+  "settings": [
+    { "type": "image_picker", "id": "image", "label": "Background Image" },
+    { "type": "text", "id": "subtitle", "label": "Subtitle", "default": "New Collection" },
+    { "type": "text", "id": "title", "label": "Title", "default": "Elevate Your Everyday" },
+    { "type": "textarea", "id": "text", "label": "Text", "default": "Premium products curated for modern living." },
+    { "type": "text", "id": "button_label", "label": "Button Label", "default": "Shop Now" },
+    { "type": "url", "id": "button_link", "label": "Button Link" }
+  ],
+  "presets": [
+    { "name": "Hero" }
+  ]
+}
+{% endschema %}

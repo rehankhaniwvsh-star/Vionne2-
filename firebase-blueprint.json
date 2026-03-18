@@ -1,0 +1,104 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A product available for sale in the Vionne store.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "The name of the product." },
+        "description": { "type": "string", "description": "Detailed description of the product." },
+        "price": { "type": "number", "description": "Price of the product." },
+        "inventory": { "type": "integer", "description": "Number of items in stock." },
+        "category": { "type": "string", "description": "Category the product belongs to." },
+        "status": { "type": "string", "enum": ["Active", "Draft", "Archived"], "description": "Current status of the product listing." },
+        "image": { "type": "string", "format": "url", "description": "URL to the product image." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the product was created." }
+      },
+      "required": ["title", "price", "inventory", "status"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A customer order.",
+      "type": "object",
+      "properties": {
+        "customer": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "email": { "type": "string", "format": "email" },
+            "phone": { "type": "string" },
+            "address": { "type": "string" }
+          }
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": { "type": "string" },
+              "title": { "type": "string" },
+              "price": { "type": "number" },
+              "quantity": { "type": "integer" }
+            }
+          }
+        },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["Pending", "Shipped", "Delivered", "Cancelled"] },
+        "paymentMethod": { "type": "string", "enum": ["COD", "Credit Card"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customer", "items", "total", "status", "paymentMethod"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "A customer who has interacted with the store.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "totalOrders": { "type": "integer" },
+        "totalSpent": { "type": "number" },
+        "lastOrderDate": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Store-wide settings and website content.",
+      "type": "object",
+      "properties": {
+        "homepage": {
+          "type": "object",
+          "properties": {
+            "heroHeadline": { "type": "string" },
+            "heroSubtext": { "type": "string" },
+            "heroImage": { "type": "string", "format": "url" }
+          }
+        },
+        "payments": {
+          "type": "object",
+          "properties": {
+            "codEnabled": { "type": "boolean" },
+            "stripeEnabled": { "type": "boolean" }
+          }
+        },
+        "notifications": {
+          "type": "object",
+          "properties": {
+            "orderConfirmation": { "type": "boolean" },
+            "shippingUpdate": { "type": "boolean" },
+            "adminAlert": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/products/{productId}": { "schema": "Product", "description": "Collection of products." },
+    "/orders/{orderId}": { "schema": "Order", "description": "Collection of customer orders." },
+    "/customers/{customerId}": { "schema": "Customer", "description": "Collection of customer profiles." },
+    "/settings/store": { "schema": "Settings", "description": "Global store settings." }
+  }
+}

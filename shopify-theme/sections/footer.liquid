@@ -1,0 +1,78 @@
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div class="footer-col">
+      <h3 class="footer-logo">VIONNE</h3>
+      <p>Curating premium essentials for the modern home. Minimalist design, maximum quality.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Shop</h4>
+      <ul>
+        <li><a href="/collections/all">All Collections</a></li>
+        <li><a href="/collections/featured">Featured</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Support</h4>
+      <ul>
+        <li><a href="/pages/contact">Contact Us</a></li>
+        <li><a href="/pages/shipping">Shipping Policy</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Newsletter</h4>
+      <form action="/contact#footer-newsletter" method="post">
+        <input type="email" placeholder="Enter your email">
+        <button type="submit">Join</button>
+      </form>
+    </div>
+  </div>
+  <div class="container footer-bottom">
+    <p>&copy; {{ 'now' | date: "%Y" }} VIONNE. All rights reserved.</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    background: #f5f5f0;
+    padding: 80px 0 40px;
+    border-top: 1px solid #eee;
+  }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 2fr;
+    gap: 60px;
+    margin-bottom: 60px;
+  }
+  .footer-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+  .footer-col h4 {
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    margin-bottom: 25px;
+  }
+  .footer-col ul {
+    list-style: none;
+    padding: 0;
+  }
+  .footer-col ul li {
+    margin-bottom: 12px;
+  }
+  .footer-col a {
+    color: #666;
+    text-decoration: none;
+    font-size: 14px;
+  }
+  .footer-bottom {
+    border-top: 1px solid #eee;
+    padding-top: 30px;
+    text-align: center;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #999;
+  }
+</style>
