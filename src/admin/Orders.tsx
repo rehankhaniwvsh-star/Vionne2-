@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, 
   Filter, 
@@ -71,60 +71,68 @@ const initialOrders: Order[] = [
   }
 ];
 
-export const Orders = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export const OrderDetails = ({ 
+  order, 
+  onClose, 
+  onStatusUpdate,
+  onUpdate
+}: { 
+  order: Order, 
+  onClose: () => void,
+  onStatusUpdate: (id: string, status: any) => Promise<void>,
+  onUpdate: (id: string, data: any) => Promise<void>
+}) => {
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState(order);
 
-  React.useEffect(() => {
-    const unsubscribe = adminService.getOrders((newOrders) => {
-      setOrders(newOrders);
-      setIsLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+  const handleCopy = (text: string, type: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopyFeedback(type);
+    setTimeout(() => setCopyFeedback(null), 2000);
+  };
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = 
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customer.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const handleWhatsApp = () => {
+    if (!order.customer.phone) return;
+    const cleanPhone = order.customer.phone.replace(/\D/g, '');
+    const text = `Hello ${order.customer.name}, this is regarding your order ${order.id}. Current status: ${order.status}.`;
+    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
+  };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-black/10 border-t-black rounded-full animate-spin" />
-      </div>
-    );
-  }
+  const handleEmail = () => {
+    if (!order.customer.email) return;
+    const subject = `Order ${order.id} Update`;
+    const body = `Hello ${order.customer.name}, your order ${order.id} is now ${order.status}.`;
+    window.location.href = `mailto:${order.customer.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
 
-  const OrderDetails = ({ order, onClose }: { order: Order, onClose: () => void }) => {
-    const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const handleStatusChange = async (newStatus: any) => {
+    setIsUpdating(true);
+    try {
+      await onStatusUpdate(order.id, newStatus);
+    } catch (error) {
+      console.error('Failed to update status:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
-    const handleCopy = (text: string, type: string) => {
-      navigator.clipboard.writeText(text);
-      setCopyFeedback(type);
-      setTimeout(() => setCopyFeedback(null), 2000);
-    };
+  const handleSaveEdit = async () => {
+    setIsUpdating(true);
+    try {
+      await onUpdate(order.id, editData);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Failed to update order:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
-    const handleWhatsApp = () => {
-      const cleanPhone = order.customer.phone.replace(/\D/g, '');
-      const text = `Hello ${order.customer.name}, this is regarding your order ${order.id}. Current status: ${order.status}.`;
-      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
-    };
-
-    const handleEmail = () => {
-      const subject = `Order ${order.id} Update`;
-      const body = `Hello ${order.customer.name}, your order ${order.id} is now ${order.status}.`;
-      window.location.href = `mailto:${order.customer.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    };
-
-    return (
-      <motion.div 
+  return (
+    <motion.div 
       initial={{ opacity: 0, x: 100 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 100 }}
@@ -137,9 +145,19 @@ export const Orders = () => {
             {order.createdAt?.toDate ? order.createdAt.toDate().toLocaleString() : order.date}
           </p>
         </div>
-        <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
-          <X size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          {!isEditing && (
+            <button 
+              onClick={() => setIsEditing(true)}
+              className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-black transition-colors"
+            >
+              Edit Details
+            </button>
+          )}
+          <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
+            <X size={20} />
+          </button>
+        </div>
       </div>
 
       <div className="p-8 space-y-10 flex-grow">
@@ -147,10 +165,12 @@ export const Orders = () => {
           <div className="flex items-center gap-4">
             <div className={`p-3 rounded-xl ${
               order.status === 'Delivered' ? 'bg-emerald-100 text-emerald-600' :
-              order.status === 'Shipped' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'
+              order.status === 'Shipped' ? 'bg-blue-100 text-blue-600' : 
+              order.status === 'Cancelled' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'
             }`}>
               {order.status === 'Delivered' ? <CheckCircle2 size={24} /> :
-               order.status === 'Shipped' ? <Truck size={24} /> : <Clock size={24} />}
+               order.status === 'Shipped' ? <Truck size={24} /> : 
+               order.status === 'Cancelled' ? <X size={24} /> : <Clock size={24} />}
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Order Status</p>
@@ -160,11 +180,9 @@ export const Orders = () => {
           <div className="flex gap-2">
             <select 
               value={order.status}
-              onChange={async (e) => {
-                await adminService.updateOrderStatus(order.id, e.target.value);
-                // The onSnapshot in the parent will update the UI
-              }}
-              className="px-4 py-2 bg-black text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-colors outline-none cursor-pointer"
+              disabled={isUpdating}
+              onChange={(e) => handleStatusChange(e.target.value)}
+              className="px-4 py-2 bg-black text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-colors outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="Pending">Pending</option>
               <option value="Shipped">Shipped</option>
@@ -177,52 +195,98 @@ export const Orders = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           <div className="space-y-4">
             <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Customer Details</h4>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-sm font-medium">
-                <div className="p-2 bg-zinc-50 rounded-lg text-zinc-400"><Mail size={16} /></div>
-                {order.customer.email}
+            {isEditing ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">Name</label>
+                  <input 
+                    type="text" 
+                    value={editData.customer.name}
+                    onChange={(e) => setEditData({...editData, customer: {...editData.customer, name: e.target.value}})}
+                    className="w-full border-b border-zinc-200 py-2 text-sm focus:border-black outline-none transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">Email</label>
+                  <input 
+                    type="email" 
+                    value={editData.customer.email}
+                    onChange={(e) => setEditData({...editData, customer: {...editData.customer, email: e.target.value}})}
+                    className="w-full border-b border-zinc-200 py-2 text-sm focus:border-black outline-none transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">Phone</label>
+                  <input 
+                    type="text" 
+                    value={editData.customer.phone}
+                    onChange={(e) => setEditData({...editData, customer: {...editData.customer, phone: e.target.value}})}
+                    className="w-full border-b border-zinc-200 py-2 text-sm focus:border-black outline-none transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">Address</label>
+                  <textarea 
+                    value={editData.customer.address}
+                    onChange={(e) => setEditData({...editData, customer: {...editData.customer, address: e.target.value}})}
+                    className="w-full border-b border-zinc-200 py-2 text-sm focus:border-black outline-none transition-colors min-h-[80px]"
+                  />
+                </div>
               </div>
-              <div className="flex items-center gap-3 text-sm font-medium">
-                <div className="p-2 bg-zinc-50 rounded-lg text-zinc-400"><Phone size={16} /></div>
-                {order.customer.phone}
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-sm font-medium">
+                  <div className="p-2 bg-zinc-50 rounded-lg text-zinc-400"><Mail size={16} /></div>
+                  {order.customer.email || 'No email provided'}
+                </div>
+                <div className="flex items-center gap-3 text-sm font-medium">
+                  <div className="p-2 bg-zinc-50 rounded-lg text-zinc-400"><Phone size={16} /></div>
+                  {order.customer.phone || 'No phone provided'}
+                </div>
+                <div className="flex items-start gap-3 text-sm font-medium">
+                  <div className="p-2 bg-zinc-50 rounded-lg text-zinc-400 mt-0.5"><MapPin size={16} /></div>
+                  {order.customer.address}
+                </div>
               </div>
-              <div className="flex items-start gap-3 text-sm font-medium">
-                <div className="p-2 bg-zinc-50 rounded-lg text-zinc-400 mt-0.5"><MapPin size={16} /></div>
-                {order.customer.address}
+            )}
+            {!isEditing && (
+              <div className="flex flex-col gap-2 pt-2">
+                <div className="flex gap-2">
+                  <button 
+                    onClick={handleWhatsApp}
+                    disabled={!order.customer.phone}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Phone size={14} />
+                    WhatsApp
+                  </button>
+                  <button 
+                    onClick={handleEmail}
+                    disabled={!order.customer.email}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Mail size={14} />
+                    Email
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleCopy(order.customer.phone, 'phone')}
+                    disabled={!order.customer.phone}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-zinc-100 text-zinc-500 rounded-xl text-[10px] font-bold hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {copyFeedback === 'phone' ? 'Copied!' : 'Copy Phone'}
+                  </button>
+                  <button 
+                    onClick={() => handleCopy(order.customer.email, 'email')}
+                    disabled={!order.customer.email}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-zinc-100 text-zinc-500 rounded-xl text-[10px] font-bold hover:bg-zinc-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {copyFeedback === 'email' ? 'Copied!' : 'Copy Email'}
+                  </button>
+                </div>
               </div>
-            </div>
-            <div className="flex flex-col gap-2 pt-2">
-              <div className="flex gap-2">
-                <button 
-                  onClick={handleWhatsApp}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-colors"
-                >
-                  <Phone size={14} />
-                  WhatsApp
-                </button>
-                <button 
-                  onClick={handleEmail}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors"
-                >
-                  <Mail size={14} />
-                  Email
-                </button>
-              </div>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => handleCopy(order.customer.phone, 'phone')}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-zinc-100 text-zinc-500 rounded-xl text-[10px] font-bold hover:bg-zinc-50 transition-colors"
-                >
-                  {copyFeedback === 'phone' ? 'Copied!' : 'Copy Phone'}
-                </button>
-                <button 
-                  onClick={() => handleCopy(order.customer.email, 'email')}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-zinc-100 text-zinc-500 rounded-xl text-[10px] font-bold hover:bg-zinc-50 transition-colors"
-                >
-                  {copyFeedback === 'email' ? 'Copied!' : 'Copy Email'}
-                </button>
-              </div>
-            </div>
+            )}
           </div>
           <div className="space-y-4">
             <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Payment Info</h4>
@@ -232,6 +296,27 @@ export const Orders = () => {
             </div>
           </div>
         </div>
+
+        {isEditing && (
+          <div className="pt-6 border-t border-zinc-100 flex gap-4">
+            <button 
+              onClick={handleSaveEdit}
+              disabled={isUpdating}
+              className="flex-grow bg-black text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-zinc-800 transition-colors disabled:opacity-50"
+            >
+              {isUpdating ? 'Saving...' : 'Save Changes'}
+            </button>
+            <button 
+              onClick={() => {
+                setIsEditing(false);
+                setEditData(order);
+              }}
+              className="px-8 py-3 rounded-xl border border-zinc-100 font-bold hover:bg-zinc-50 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
 
         <div className="space-y-4">
           <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Order Items</h4>
@@ -282,6 +367,42 @@ export const Orders = () => {
   );
 };
 
+export const Orders = () => {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const selectedOrder = useMemo(() => 
+    orders.find(o => o.id === selectedOrderId), 
+    [orders, selectedOrderId]
+  );
+
+  React.useEffect(() => {
+    const unsubscribe = adminService.getOrders((newOrders) => {
+      setOrders(newOrders);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const filteredOrders = orders.filter(order => {
+    const matchesSearch = 
+      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.customer.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-black/10 border-t-black rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -296,10 +417,19 @@ export const Orders = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setSelectedOrder(null)}
+              onClick={() => setSelectedOrderId(null)}
               className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
             />
-            <OrderDetails order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+            <OrderDetails 
+              order={selectedOrder} 
+              onClose={() => setSelectedOrderId(null)} 
+              onStatusUpdate={async (id, status) => {
+                await adminService.updateOrderStatus(id, status);
+              }}
+              onUpdate={async (id, data) => {
+                await adminService.updateOrder(id, data);
+              }}
+            />
           </>
         )}
       </AnimatePresence>
@@ -388,7 +518,7 @@ export const Orders = () => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button 
-                      onClick={() => setSelectedOrder(order)}
+                      onClick={() => setSelectedOrderId(order.id)}
                       className="p-2 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-lg transition-all"
                     >
                       <Eye size={18} />

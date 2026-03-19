@@ -38,7 +38,9 @@ const handleFirestoreError = (error: any, operation: string, path: string) => {
 const parsePrice = (price: any): number => {
   if (typeof price === 'number') return price;
   if (!price) return 0;
-  const parsed = Number(String(price).replace(/[^0-9.]/g, ''));
+  // Remove currency symbols, commas, and whitespace
+  const cleaned = String(price).replace(/[₹$,\s]/g, '');
+  const parsed = parseFloat(cleaned);
   return isNaN(parsed) ? 0 : parsed;
 };
 
@@ -138,6 +140,11 @@ export const adminService = {
       // Add order
       const orderData = {
         ...order,
+        total: parsePrice(order.total),
+        items: order.items.map((item: any) => ({
+          ...item,
+          price: parsePrice(item.price)
+        })),
         status: 'Pending',
         createdAt: Timestamp.now()
       };
@@ -183,6 +190,24 @@ export const adminService = {
     }
   },
 
+  updateOrder: async (id: string, orderData: any) => {
+    try {
+      const docRef = doc(db, 'orders', id);
+      const normalizedOrder = {
+        ...orderData,
+        total: parsePrice(orderData.total),
+        items: orderData.items.map((item: any) => ({
+          ...item,
+          price: parsePrice(item.price)
+        }))
+      };
+      await updateDoc(docRef, normalizedOrder);
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, 'update', `orders/${id}`);
+    }
+  },
+
   getOrderByTrackingId: async (orderId: string, email: string) => {
     try {
       const docRef = doc(db, 'orders', orderId);
@@ -201,7 +226,7 @@ export const adminService = {
 
   // Customers
   getCustomers: (callback: (customers: any[]) => void) => {
-    const q = query(collection(db, 'customers'), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, 'customers'), orderBy('lastOrder', 'desc'));
     return onSnapshot(q, (snapshot) => {
       const customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       callback(customers);

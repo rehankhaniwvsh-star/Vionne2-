@@ -10,11 +10,14 @@ interface CheckoutPageProps {
 }
 
 export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }) => {
-  const { items, total, clearCart } = useCart();
+  const { items, total: cartTotal, clearCart, updateQuantity } = useCart();
   const [paymentMethod, setPaymentMethod] = React.useState('COD');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const shippingFee = cartTotal > 0 && cartTotal < 1000 ? 100 : 0;
+  const finalTotal = cartTotal + shippingFee;
   const [formData, setFormData] = useState({
     email: '',
     phone: '',
@@ -51,12 +54,32 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
           variant: item.selectedVariant,
           image: item.image
         })),
-        total,
+        total: finalTotal,
         paymentMethod
       });
       
       if (docRef) {
         setOrderId(docRef.id);
+        
+        // Backend integration: Call our server to "send" notifications
+        try {
+          await fetch('/api/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              orderData: {
+                id: docRef.id,
+                customer: {
+                  email: formData.email,
+                  phone: formData.phone
+                },
+                total: finalTotal
+              }
+            })
+          });
+        } catch (err) {
+          console.warn('Backend notification failed, but order was stored:', err);
+        }
       }
       
       setIsSuccess(true);
@@ -90,7 +113,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
             </div>
             <div className="pt-2 border-t border-black/5">
               <p className="text-[10px] font-bold uppercase tracking-widest text-black/40 mb-1">Total Amount Paid</p>
-              <p className="text-lg font-bold">₹{(Number(total) || 0).toLocaleString('en-IN')}</p>
+              <p className="text-lg font-bold">₹{(Number(finalTotal) || 0).toLocaleString('en-IN')}</p>
             </div>
           </div>
           <p className="text-black/60 leading-relaxed">
@@ -246,7 +269,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
                 disabled={isSubmitting || items.length === 0}
                 className="w-full bg-black text-white py-5 text-xs font-bold uppercase tracking-widest hover:bg-black/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Processing...' : `Complete Order — ₹${total.toLocaleString('en-IN')}`}
+                {isSubmitting ? 'Processing...' : `Complete Order — ₹${finalTotal.toLocaleString('en-IN')}`}
               </button>
             </form>
           </div>
@@ -260,14 +283,27 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
                   <div key={`${item.id}-${item.selectedVariant}`} className="flex items-center space-x-4">
                     <div className="relative w-16 h-20 bg-white flex-shrink-0">
                       <img src={item.image} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                      <span className="absolute -top-2 -right-2 bg-black text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center">
-                        {item.quantity}
-                      </span>
                     </div>
                     <div className="flex-1">
                       <h4 className="text-sm font-medium">{item.title}</h4>
                       <p className="text-[10px] text-black/40 uppercase tracking-widest">{item.selectedVariant}</p>
-                      <p className="text-[10px] text-black/40">₹{(Number(item.price) || 0).toLocaleString('en-IN')} x {item.quantity}</p>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <button 
+                          type="button"
+                          onClick={() => updateQuantity(item.id, item.selectedVariant, item.quantity - 1)}
+                          className="w-5 h-5 border border-black/10 flex items-center justify-center text-[10px] hover:bg-black hover:text-white transition-colors"
+                        >
+                          -
+                        </button>
+                        <span className="text-[10px] font-bold w-4 text-center">{item.quantity}</span>
+                        <button 
+                          type="button"
+                          onClick={() => updateQuantity(item.id, item.selectedVariant, item.quantity + 1)}
+                          className="w-5 h-5 border border-black/10 flex items-center justify-center text-[10px] hover:bg-black hover:text-white transition-colors"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
                     <span className="text-sm font-medium">₹{((Number(item.price) || 0) * item.quantity).toLocaleString('en-IN')}</span>
                   </div>
@@ -277,15 +313,19 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
               <div className="space-y-4 pt-8 border-t border-black/5">
                 <div className="flex justify-between text-sm">
                   <span className="text-black/60">Subtotal</span>
-                  <span>₹{total.toLocaleString('en-IN')}</span>
+                  <span>₹{cartTotal.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-black/60">Shipping</span>
-                  <span className="text-green-600 font-bold uppercase text-[10px] tracking-widest">Free</span>
+                  {shippingFee === 0 ? (
+                    <span className="text-green-600 font-bold uppercase text-[10px] tracking-widest">Free</span>
+                  ) : (
+                    <span>₹{shippingFee.toLocaleString('en-IN')}</span>
+                  )}
                 </div>
                 <div className="pt-4 border-t border-black/5 flex justify-between font-bold text-lg">
                   <span>Total</span>
-                  <span>₹{total.toLocaleString('en-IN')}</span>
+                  <span>₹{finalTotal.toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>

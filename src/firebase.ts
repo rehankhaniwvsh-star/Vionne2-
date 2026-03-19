@@ -13,8 +13,14 @@ const app = initializeApp(firebaseConfig);
 let analytics: any;
 isSupported().then(supported => {
   if (supported) {
-    analytics = getAnalytics(app);
+    try {
+      analytics = getAnalytics(app);
+    } catch (error) {
+      console.warn('Firebase Analytics initialization failed (likely due to environment restrictions):', error);
+    }
   }
+}).catch(err => {
+  console.warn('Firebase Analytics isSupported check failed:', err);
 });
 
 // Initialize Auth and Firestore

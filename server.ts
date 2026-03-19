@@ -17,6 +17,25 @@ async function startServer() {
     res.json({ status: "ok", message: "Vionne Admin API is running" });
   });
 
+  app.post("/api/checkout", (req, res) => {
+    const { orderData } = req.body;
+    
+    console.log("Processing order:", orderData);
+    
+    // Mock sending email and SMS
+    console.log(`[MOCK] Sending confirmation email to: ${orderData.customer.email}`);
+    console.log(`[MOCK] Sending confirmation SMS to: ${orderData.customer.phone}`);
+    
+    res.json({ 
+      success: true, 
+      message: "Order processed and notifications sent",
+      notifications: {
+        email: "sent",
+        sms: "sent"
+      }
+    });
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

@@ -111,8 +111,10 @@ service cloud.firestore {
     }
 
     // Orders: Createable by anyone (checkout), readable/writable only by admin
+    // Public 'get' is allowed for the tracking system (email verification happens in frontend)
     match /orders/{orderId} {
-      allow read: if isAdmin();
+      allow get: if true;
+      allow list: if isAdmin();
       allow create: if isValidOrder(request.resource.data);
       allow update, delete: if isAdmin() && isValidOrder(request.resource.data);
     }

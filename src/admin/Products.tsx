@@ -10,7 +10,9 @@ import {
   X,
   Save,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Upload,
+  FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -75,26 +77,98 @@ export const Products = () => {
   }
 
   const ProductForm = ({ product, onCancel, onSave }: any) => {
-    const [formData, setFormData] = React.useState(product || {
-      title: '',
-      price: 0,
-      inventory: 0,
-      category: 'Accessories',
-      status: 'Active',
-      image: 'https://picsum.photos/seed/new/200/200',
-      images: [],
-      description: '',
-      variants: ['Default']
+    const [formData, setFormData] = React.useState({
+      title: product?.title || '',
+      price: product?.price?.toString() || '0',
+      inventory: product?.inventory || 0,
+      category: product?.category || 'Accessories',
+      status: product?.status || 'Active',
+      image: product?.image || 'https://picsum.photos/seed/new/200/200',
+      images: product?.images || [],
+      description: product?.description || '',
+      variants: product?.variants || ['Default']
     });
 
     const [imagesText, setImagesText] = React.useState(formData.images?.join('\n') || '');
     const [variantsText, setVariantsText] = React.useState(formData.variants?.join(', ') || 'Default');
+    const [newImageUrl, setNewImageUrl] = React.useState('');
+    const [isBulkAdding, setIsBulkAdding] = React.useState(false);
+    const [bulkImagesText, setBulkImagesText] = React.useState('');
+
+    const addImage = () => {
+      if (newImageUrl && !formData.images.includes(newImageUrl)) {
+        const newImages = [...formData.images, newImageUrl];
+        setFormData({
+          ...formData, 
+          images: newImages,
+          image: formData.image || newImageUrl // Set as main if none exists
+        });
+        setImagesText(newImages.join('\n'));
+        setNewImageUrl('');
+      }
+    };
+
+    const handleBulkAdd = () => {
+      const urls = bulkImagesText
+        .split(/[\n,]/)
+        .map(url => url.trim())
+        .filter(url => url && url.startsWith('http') && !formData.images.includes(url));
+      
+      if (urls.length > 0) {
+        const newImages = [...formData.images, ...urls];
+        setFormData({
+          ...formData,
+          images: newImages,
+          image: formData.image || urls[0]
+        });
+        setImagesText(newImages.join('\n'));
+        setBulkImagesText('');
+        setIsBulkAdding(false);
+      }
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files) return;
+
+      Array.from(files).forEach((file: File) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = reader.result as string;
+          if (!formData.images.includes(base64String)) {
+            setFormData((prev: any) => {
+              const newImages = [...prev.images, base64String];
+              return {
+                ...prev,
+                images: newImages,
+                image: prev.image || base64String
+              };
+            });
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    };
+
+    const removeImage = (url: string) => {
+      const newImages = formData.images.filter((img: string) => img !== url);
+      setFormData({
+        ...formData,
+        images: newImages,
+        image: formData.image === url ? (newImages[0] || '') : formData.image
+      });
+      setImagesText(newImages.join('\n'));
+    };
+
+    const setMainImage = (url: string) => {
+      setFormData({ ...formData, image: url });
+    };
 
     return (
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-8 rounded-2xl border border-zinc-100 shadow-xl max-w-2xl mx-auto"
+        className="bg-white p-8 rounded-2xl border border-zinc-100 shadow-xl max-w-3xl mx-auto w-full max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-8">
           <h3 className="text-xl font-bold">{product ? 'Edit Product' : 'Add New Product'}</h3>
@@ -134,10 +208,17 @@ export const Products = () => {
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Price (₹)</label>
               <input 
-                type="number" 
+                type="text" 
                 value={formData.price}
-                onChange={(e) => setFormData({...formData, price: parseFloat(e.target.value)})}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Only allow numbers and one decimal point
+                  if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                    setFormData({...formData, price: value});
+                  }
+                }}
                 className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors"
+                placeholder="0.00"
               />
             </div>
             <div className="space-y-2">
@@ -173,16 +254,125 @@ export const Products = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Main Image URL</label>
-              <input 
-                type="text" 
-                value={formData.image}
-                onChange={(e) => setFormData({...formData, image: e.target.value})}
-                className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors"
-              />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Product Gallery</label>
+              <div className="flex gap-2">
+                <label className="cursor-pointer px-3 py-1.5 bg-zinc-50 border border-zinc-100 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-100 transition-colors flex items-center gap-2">
+                  <Upload size={12} />
+                  Upload Files
+                  <input 
+                    type="file" 
+                    multiple 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handleFileUpload}
+                  />
+                </label>
+                <button 
+                  type="button"
+                  onClick={() => setIsBulkAdding(!isBulkAdding)}
+                  className="px-3 py-1.5 bg-zinc-50 border border-zinc-100 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-100 transition-colors flex items-center gap-2"
+                >
+                  <FileText size={12} />
+                  Bulk Add URLs
+                </button>
+              </div>
             </div>
+
+            {isBulkAdding && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="space-y-3 p-4 bg-zinc-50 rounded-xl border border-zinc-100"
+              >
+                <p className="text-[10px] text-zinc-500 font-medium">Paste multiple image URLs separated by commas or new lines.</p>
+                <textarea 
+                  value={bulkImagesText}
+                  onChange={(e) => setBulkImagesText(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors min-h-[100px] text-sm font-mono"
+                  placeholder="https://example.com/img1.jpg, https://example.com/img2.jpg..."
+                />
+                <div className="flex justify-end gap-2">
+                  <button 
+                    type="button"
+                    onClick={() => setIsBulkAdding(false)}
+                    className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-black"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={handleBulkAdd}
+                    className="px-4 py-2 bg-black text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-800"
+                  >
+                    Add All
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {formData.images.map((url: string, index: number) => (
+                <div key={index} className="relative group aspect-[3/4] rounded-xl overflow-hidden border border-zinc-100 bg-zinc-50">
+                  <img 
+                    src={url} 
+                    alt={`Product ${index}`} 
+                    className="w-full h-full object-cover" 
+                    referrerPolicy="no-referrer" 
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <button 
+                      type="button"
+                      onClick={() => setMainImage(url)}
+                      className={`p-2 rounded-lg transition-colors ${formData.image === url ? 'bg-emerald-500 text-white' : 'bg-white text-black hover:bg-zinc-100'}`}
+                      title="Set as Main Image"
+                    >
+                      <ImageIcon size={16} />
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => removeImage(url)}
+                      className="p-2 bg-white text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                      title="Remove Image"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                  {formData.image === url && (
+                    <div className="absolute top-2 left-2 bg-emerald-500 text-white text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded-full shadow-lg">
+                      Main
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div className="aspect-[3/4] rounded-xl border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center p-4 text-center hover:border-zinc-400 transition-colors cursor-pointer group bg-zinc-50/50">
+                <ImageIcon size={24} className="text-zinc-300 group-hover:text-zinc-400 mb-2" />
+                <p className="text-[8px] font-bold uppercase tracking-widest text-zinc-400">Add via URL below</p>
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <div className="relative flex-grow">
+                <input 
+                  type="text" 
+                  value={newImageUrl}
+                  onChange={(e) => setNewImageUrl(e.target.value)}
+                  placeholder="Paste image URL from CSV or web..."
+                  className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors text-sm"
+                />
+              </div>
+              <button 
+                type="button"
+                onClick={addImage}
+                className="px-6 py-3 bg-zinc-100 text-black rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all"
+              >
+                Add Image
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Variants (comma separated)</label>
               <input 
@@ -197,22 +387,15 @@ export const Products = () => {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Additional Image URLs (one per line)</label>
-            <textarea 
-              value={imagesText}
-              onChange={(e) => {
-                setImagesText(e.target.value);
-                setFormData({...formData, images: e.target.value.split('\n').map(url => url.trim()).filter(url => url)});
-              }}
-              className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors min-h-[80px]"
-              placeholder="https://example.com/image1.jpg"
-            />
-          </div>
-
-          <div className="pt-6 flex gap-4">
+          <div className="pt-6 flex gap-4 sticky bottom-0 bg-white pb-2">
             <button 
-              onClick={() => onSave(formData)}
+              onClick={() => {
+                const finalData = {
+                  ...formData,
+                  price: parseFloat(formData.price) || 0
+                };
+                onSave(finalData);
+              }}
               className="flex-grow bg-black text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-zinc-800 transition-colors"
             >
               <Save size={18} />
@@ -230,6 +413,46 @@ export const Products = () => {
     );
   };
 
+  const [isImporting, setIsImporting] = React.useState(false);
+  const [importText, setImportText] = React.useState('');
+
+  const handleCSVImport = async () => {
+    const lines = importText.split('\n').filter(line => line.trim());
+    if (lines.length < 2) return;
+
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const productsToImport = lines.slice(1).map(line => {
+      const values = line.split(',').map(v => v.trim());
+      const product: any = {};
+      headers.forEach((header, index) => {
+        if (header === 'price' || header === 'inventory') {
+          product[header] = parseFloat(values[index]) || 0;
+        } else if (header === 'images') {
+          product[header] = values[index] ? values[index].split('|').map(s => s.trim()) : [];
+        } else if (header === 'variants') {
+          product[header] = values[index] ? values[index].split('|').map(s => s.trim()) : ['Default'];
+        } else {
+          product[header] = values[index];
+        }
+      });
+      
+      // Defaults
+      if (!product.status) product.status = 'Active';
+      if (!product.category) product.category = 'Accessories';
+      if (!product.images) product.images = [];
+      if (!product.image && product.images.length > 0) product.image = product.images[0];
+      
+      return product;
+    });
+
+    for (const product of productsToImport) {
+      await adminService.addProduct(product);
+    }
+
+    setIsImporting(false);
+    setImportText('');
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -237,14 +460,67 @@ export const Products = () => {
           <h1 className="text-3xl font-bold tracking-tight">Products</h1>
           <p className="text-zinc-400 mt-1">Manage your inventory and product listings.</p>
         </div>
-        <button 
-          onClick={() => setIsAdding(true)}
-          className="flex items-center gap-2 bg-black text-white px-6 py-3 rounded-xl font-bold hover:bg-zinc-800 transition-all shadow-lg shadow-black/10"
-        >
-          <Plus size={20} />
-          Add Product
-        </button>
+        <div className="flex gap-3">
+          <button 
+            onClick={() => setIsImporting(true)}
+            className="flex items-center gap-2 bg-white border border-zinc-100 text-black px-6 py-3 rounded-xl font-bold hover:bg-zinc-50 transition-all shadow-sm"
+          >
+            <Upload size={20} />
+            Import CSV
+          </button>
+          <button 
+            onClick={() => setIsAdding(true)}
+            className="flex items-center gap-2 bg-black text-white px-6 py-3 rounded-xl font-bold hover:bg-zinc-800 transition-all shadow-lg shadow-black/10"
+          >
+            <Plus size={20} />
+            Add Product
+          </button>
+        </div>
       </div>
+
+      <AnimatePresence>
+        {isImporting && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white p-8 rounded-2xl border border-zinc-100 shadow-2xl max-w-2xl w-full"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold">Import Products from CSV</h3>
+                <button onClick={() => setIsImporting(false)} className="p-2 hover:bg-zinc-100 rounded-full">
+                  <X size={20} />
+                </button>
+              </div>
+              <p className="text-zinc-500 text-sm mb-4">
+                Paste your CSV data below. Headers should include: <strong>title, price, inventory, category, description, images, variants</strong>.
+                Use <strong>|</strong> to separate multiple images or variants.
+              </p>
+              <textarea 
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors min-h-[300px] text-xs font-mono mb-6"
+                placeholder="title,price,inventory,category,description,images,variants&#10;Minimalist Watch,1200,50,Accessories,A sleek watch,https://img1.jpg|https://img2.jpg,Silver|Black"
+              />
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setIsImporting(false)}
+                  className="flex-1 py-3 rounded-xl border border-zinc-100 font-bold hover:bg-zinc-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleCSVImport}
+                  disabled={!importText.trim()}
+                  className="flex-1 bg-black text-white py-3 rounded-xl font-bold hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                >
+                  Import Products
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {productToDelete && (

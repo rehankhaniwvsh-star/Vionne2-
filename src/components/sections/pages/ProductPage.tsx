@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Product } from '../../../constants';
 import { useCart } from '../../../store/useCart';
 import { motion, AnimatePresence } from 'motion/react';
-import { Minus, Plus, ShoppingBag, ChevronRight, Truck, RotateCcw, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { Minus, Plus, ShoppingBag, ChevronRight, Truck, RotateCcw, ShieldCheck, ArrowLeft, Maximize2, X as CloseIcon, ChevronLeft as PrevIcon, ChevronRight as NextIcon } from 'lucide-react';
 import { adminService } from '../../../services/adminService';
 
 export const ProductPage: React.FC = () => {
@@ -14,6 +14,7 @@ export const ProductPage: React.FC = () => {
   const [selectedVariant, setSelectedVariant] = useState<string>('');
   const [activeImage, setActiveImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const addItem = useCart(state => state.addItem);
 
   useEffect(() => {
@@ -86,6 +87,65 @@ export const ProductPage: React.FC = () => {
 
   return (
     <div className="min-h-screen pt-10 pb-24">
+      <AnimatePresence>
+        {isLightboxOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black z-[100] flex items-center justify-center p-4 md:p-10"
+          >
+            <button 
+              onClick={() => setIsLightboxOpen(false)}
+              className="absolute top-6 right-6 text-white/60 hover:text-white transition-colors z-[110]"
+            >
+              <CloseIcon size={32} />
+            </button>
+
+            <div className="relative w-full h-full flex items-center justify-center">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveImage((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
+                }}
+                className="absolute left-0 text-white/40 hover:text-white transition-colors p-4"
+              >
+                <PrevIcon size={48} strokeWidth={1} />
+              </button>
+
+              <motion.img 
+                key={activeImage}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                src={allImages[activeImage]} 
+                alt={product.title}
+                referrerPolicy="no-referrer"
+                className="max-w-full max-h-full object-contain"
+              />
+
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveImage((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
+                }}
+                className="absolute right-0 text-white/40 hover:text-white transition-colors p-4"
+              >
+                <NextIcon size={48} strokeWidth={1} />
+              </button>
+            </div>
+
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-2">
+              {allImages.map((_, idx) => (
+                <div 
+                  key={idx}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${activeImage === idx ? 'bg-white w-4' : 'bg-white/20'}`}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="container mx-auto px-4 md:px-8">
         {/* Breadcrumbs */}
         <div className="flex items-center space-x-2 text-[10px] uppercase tracking-widest text-black/40 mb-12">
@@ -96,31 +156,39 @@ export const ProductPage: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
           {/* Image Gallery */}
-          <div className="space-y-4">
-            <div className="aspect-[4/5] overflow-hidden bg-[#F5F5F0]">
-              <motion.img 
-                key={activeImage}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                src={allImages[activeImage] || 'https://picsum.photos/seed/placeholder/400/500'} 
-                alt={product.title}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover"
-              />
-            </div>
+          <div className="flex flex-col-reverse md:flex-row gap-6">
+            {/* Thumbnails */}
             {allImages.length > 1 && (
-              <div className="grid grid-cols-4 gap-4">
+              <div className="flex md:flex-col gap-4 overflow-x-auto md:overflow-y-auto no-scrollbar md:w-24 shrink-0">
                 {allImages.map((img, idx) => (
                   <button 
                     key={idx}
                     onClick={() => setActiveImage(idx)}
-                    className={`aspect-square overflow-hidden bg-[#F5F5F0] border-2 transition-colors ${activeImage === idx ? 'border-black' : 'border-transparent'}`}
+                    className={`aspect-square w-20 md:w-full overflow-hidden bg-[#F5F5F0] border-2 transition-all duration-300 ${activeImage === idx ? 'border-black' : 'border-transparent opacity-60 hover:opacity-100'}`}
                   >
                     <img src={img} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
             )}
+            
+            {/* Main Image */}
+            <div className="flex-1 relative group cursor-zoom-in" onClick={() => setIsLightboxOpen(true)}>
+              <div className="aspect-[4/5] overflow-hidden bg-[#F5F5F0]">
+                <motion.img 
+                  key={activeImage}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  src={allImages[activeImage] || 'https://picsum.photos/seed/placeholder/400/500'} 
+                  alt={product.title}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+              </div>
+              <div className="absolute bottom-6 right-6 p-3 bg-white/80 backdrop-blur-sm rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <Maximize2 size={20} className="text-black" />
+              </div>
+            </div>
           </div>
 
           {/* Product Info */}

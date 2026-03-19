@@ -24,6 +24,13 @@ const newProducts = [
     inventory: 0,
     status: "Active",
     image: "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/ms_5uhyf_512_676142213_2.jpg?v=1773598784",
+    images: [
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/ms_5uhyf_512_676142213_2.jpg?v=1773598784",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/ms_gr5ev_512_676142213.jpg?v=1773598784",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1773597902511.png?v=1773598747",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1773597911111_2.jpg?v=1773598747",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1773597677828_2.jpg?v=1773598746"
+    ],
     createdAt: Timestamp.now()
   },
   {
@@ -77,6 +84,12 @@ const newProducts = [
     inventory: 0,
     status: "Archived",
     image: "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/LEDDrawing_TracingBoard_PerfectforKids_Artists_GlowLightPadforSketching_Drawing_DIYArtProjects__2.jpg?v=1770991007",
+    images: [
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/LEDDrawing_TracingBoard_PerfectforKids_Artists_GlowLightPadforSketching_Drawing_DIYArtProjects__2.jpg?v=1770991007",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1000011442_2.jpg?v=1770991007",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1000011441_2.jpg?v=1770991007",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1000011440_2.jpg?v=1770991007"
+    ],
     createdAt: Timestamp.now()
   },
   {
@@ -104,6 +117,12 @@ const newProducts = [
     inventory: 0,
     status: "Archived",
     image: "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1770989050122.png?v=1770990454",
+    images: [
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1770989050122.png?v=1770990454",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1770989127424.png?v=1770990451",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/file_0000000049e071fd9c74feb88ff0b7bf.png?v=1770990451",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/file_00000000a2cc71fdb1be2faee2012952.png?v=1770990451"
+    ],
     createdAt: Timestamp.now()
   },
   {
@@ -160,6 +179,12 @@ const newProducts = [
     inventory: 0,
     status: "Active",
     image: "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/PetHairRemoverBrush_Double-SidedSelf-CleaningLintBrushforDog_CatHair_ReusableFurRemoverforClothes_CarSeats.webp?v=1770988565",
+    images: [
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/PetHairRemoverBrush_Double-SidedSelf-CleaningLintBrushforDog_CatHair_ReusableFurRemoverforClothes_CarSeats.webp?v=1770988565",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1000014082.webp?v=1770988565",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1000014077.webp?v=1770988565",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1000014083.webp?v=1770988565"
+    ],
     createdAt: Timestamp.now()
   },
   {
@@ -196,6 +221,12 @@ const newProducts = [
     inventory: 0,
     status: "Archived",
     image: "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/3in1PetSteamBrush_Self-CleaningDog_CatGroomingComb_SteamingPetHairBrushforAllCoatTypes.webp?v=1770987464",
+    images: [
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/3in1PetSteamBrush_Self-CleaningDog_CatGroomingComb_SteamingPetHairBrushforAllCoatTypes.webp?v=1770987464",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1000014156.webp?v=1770987464",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1000014158.webp?v=1770987464",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1000014157.webp?v=1770987464"
+    ],
     createdAt: Timestamp.now()
   },
   {
@@ -218,6 +249,12 @@ const newProducts = [
     inventory: 0,
     status: "Archived",
     image: "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1770985006272_2.jpg?v=1770985374",
+    images: [
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1770985006272_2.jpg?v=1770985374",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1770984717114_2.jpg?v=1770985395",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1770984575236_2.jpg?v=1770985400",
+      "https://cdn.shopify.com/s/files/1/0794/5247/1529/files/1770984763488.png?v=1770985429"
+    ],
     createdAt: Timestamp.now()
   }
 ];

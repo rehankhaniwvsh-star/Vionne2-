@@ -17,43 +17,42 @@ interface CartStore {
 
 export const useCart = create<CartStore>((set, get) => ({
   items: [],
+  total: 0,
   addItem: (product, variant) => {
     const items = get().items;
     const existingItem = items.find(item => item.id === product.id && item.selectedVariant === variant);
     
+    let newItems;
     if (existingItem) {
-      set({
-        items: items.map(item => 
-          item.id === product.id && item.selectedVariant === variant
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        )
-      });
+      newItems = items.map(item => 
+        item.id === product.id && item.selectedVariant === variant
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      );
     } else {
-      set({ items: [...items, { ...product, quantity: 1, selectedVariant: variant }] });
+      newItems = [...items, { ...product, quantity: 1, selectedVariant: variant }];
     }
+    
+    const newTotal = newItems.reduce((sum, item) => sum + (Number(item.price) || 0) * item.quantity, 0);
+    set({ items: newItems, total: newTotal });
   },
   removeItem: (id, variant) => {
-    set({ items: get().items.filter(item => !(item.id === id && item.selectedVariant === variant)) });
+    const newItems = get().items.filter(item => !(item.id === id && item.selectedVariant === variant));
+    const newTotal = newItems.reduce((sum, item) => sum + (Number(item.price) || 0) * item.quantity, 0);
+    set({ items: newItems, total: newTotal });
   },
   updateQuantity: (id, variant, quantity) => {
     if (quantity <= 0) {
       get().removeItem(id, variant);
       return;
     }
-    set({
-      items: get().items.map(item => 
-        item.id === id && item.selectedVariant === variant
-          ? { ...item, quantity }
-          : item
-      )
-    });
+    const newItems = get().items.map(item => 
+      item.id === id && item.selectedVariant === variant
+        ? { ...item, quantity }
+        : item
+    );
+    const newTotal = newItems.reduce((sum, item) => sum + (Number(item.price) || 0) * item.quantity, 0);
+    set({ items: newItems, total: newTotal });
   },
-  clearCart: () => set({ items: [] }),
-  get total() {
-    return get().items.reduce((sum, item) => {
-      const price = Number(item.price) || 0;
-      return sum + (price * item.quantity);
-    }, 0);
-  }
+  clearCart: () => set({ items: [], total: 0 }),
 }));
