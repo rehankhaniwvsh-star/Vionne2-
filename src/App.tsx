@@ -6,6 +6,7 @@
 import React, { Component, ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { Hero } from './components/sections/Hero';
@@ -124,6 +125,7 @@ export default function App() {
     <Router>
       <ErrorBoundary>
         <AppRoutes />
+        <Analytics />
       </ErrorBoundary>
     </Router>
   );
