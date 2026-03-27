@@ -38,8 +38,9 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onBack }) => {
   };
 
   const getStatusStep = (status: string) => {
-    const steps = ['Pending', 'Shipped', 'Delivered'];
-    return steps.indexOf(status);
+    const steps = ['Pending', 'Confirmed', 'Shipped', 'Delivered'];
+    const index = steps.indexOf(status);
+    return index === -1 ? 0 : index;
   };
 
   return (
@@ -133,7 +134,7 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onBack }) => {
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-black/40">Order Date</p>
-                    <p className="text-sm">{order.createdAt?.toDate().toLocaleDateString() || order.date}</p>
+                    <p className="text-sm">{order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString() : order.date}</p>
                   </div>
                 </div>
 
@@ -141,12 +142,13 @@ export const TrackOrderPage: React.FC<TrackOrderPageProps> = ({ onBack }) => {
                   <div className="absolute top-1/2 left-0 w-full h-0.5 bg-black/5 -translate-y-1/2" />
                   <div 
                     className="absolute top-1/2 left-0 h-0.5 bg-black -translate-y-1/2 transition-all duration-1000" 
-                    style={{ width: `${(getStatusStep(order.status) / 2) * 100}%` }}
+                    style={{ width: `${(getStatusStep(order.status) / 3) * 100}%` }}
                   />
                   
                   <div className="relative flex justify-between">
                     {[
-                      { label: 'Confirmed', icon: Clock, status: 'Pending' },
+                      { label: 'Pending', icon: Clock, status: 'Pending' },
+                      { label: 'Confirmed', icon: Package, status: 'Confirmed' },
                       { label: 'Shipped', icon: Truck, status: 'Shipped' },
                       { label: 'Delivered', icon: CheckCircle, status: 'Delivered' }
                     ].map((step, idx) => {

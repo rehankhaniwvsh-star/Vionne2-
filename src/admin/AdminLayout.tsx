@@ -10,7 +10,8 @@ import {
   Bell, 
   LogOut,
   Menu,
-  X
+  X,
+  ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -80,6 +81,7 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     { to: '/admin/products', icon: <Package size={20} />, label: 'Products' },
     { to: '/admin/orders', icon: <ShoppingCart size={20} />, label: 'Orders' },
     { to: '/admin/customers', icon: <Users size={20} />, label: 'Customers' },
+    { to: '/admin/users', icon: <ShieldCheck size={20} />, label: 'Admins' },
     { to: '/admin/website', icon: <Globe size={20} />, label: 'Website' },
     { to: '/admin/settings', icon: <Settings size={20} />, label: 'Settings' },
   ];

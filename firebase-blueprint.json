@@ -43,7 +43,7 @@
           }
         },
         "total": { "type": "number" },
-        "status": { "type": "string", "enum": ["Pending", "Shipped", "Delivered", "Cancelled"] },
+        "status": { "type": "string", "enum": ["Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"] },
         "paymentMethod": { "type": "string", "enum": ["COD", "Credit Card"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },
@@ -93,12 +93,27 @@
           }
         }
       }
+    },
+    "User": {
+      "title": "User",
+      "description": "A user of the admin panel.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string", "format": "url" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
     }
   },
   "firestore": {
     "/products/{productId}": { "schema": "Product", "description": "Collection of products." },
     "/orders/{orderId}": { "schema": "Order", "description": "Collection of customer orders." },
     "/customers/{customerId}": { "schema": "Customer", "description": "Collection of customer profiles." },
-    "/settings/store": { "schema": "Settings", "description": "Global store settings." }
+    "/settings/store": { "schema": "Settings", "description": "Global store settings." },
+    "/users/{userId}": { "schema": "User", "description": "Collection of admin users." }
   }
 }

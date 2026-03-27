@@ -46,7 +46,16 @@ export const CartPage: React.FC<CartPageProps> = ({ onCheckout, onContinueShoppi
                   className="flex items-start space-x-6 pb-8 border-b border-black/5"
                 >
                   <div className="w-24 sm:w-32 aspect-[4/5] bg-[#F5F5F0] overflow-hidden flex-shrink-0">
-                    <img src={item.image} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                    <img 
+                      src={item.image} 
+                      alt={item.title} 
+                      referrerPolicy="no-referrer" 
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'https://picsum.photos/seed/placeholder/400/500';
+                      }}
+                      className="w-full h-full object-cover" 
+                    />
                   </div>
                   
                   <div className="flex-1 space-y-4">

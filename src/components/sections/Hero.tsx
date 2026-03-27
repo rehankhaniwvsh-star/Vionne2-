@@ -10,8 +10,8 @@ export const Hero: React.FC<HeroProps> = ({ onShopNow }) => {
     <section className="relative h-[90vh] flex items-center overflow-hidden">
       <div className="absolute inset-0 z-0">
         <img 
-          src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=2000" 
-          alt="Minimalist Tech" 
+          src="https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&q=80&w=2000" 
+          alt="Happy Pets" 
           referrerPolicy="no-referrer"
           className="w-full h-full object-cover"
         />

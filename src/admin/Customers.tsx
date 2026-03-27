@@ -45,10 +45,12 @@ export const Customers = () => {
     return () => unsubscribe();
   }, []);
 
-  const filteredCustomers = customers.filter(c => 
-    c.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCustomers = customers.filter(c => {
+    const name = c.name || '';
+    const email = c.email || '';
+    return name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           email.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   if (loading) {
     return (

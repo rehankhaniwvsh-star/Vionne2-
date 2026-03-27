@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { Component, ReactNode } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { X } from 'lucide-react';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { Hero } from './components/sections/Hero';
@@ -27,10 +28,76 @@ import { Dashboard } from './admin/Dashboard';
 import { Products } from './admin/Products';
 import { Orders } from './admin/Orders';
 import { Customers } from './admin/Customers';
+import { Users as AdminUsers } from './admin/Users';
 import { Settings } from './admin/Settings';
 import { Login } from './admin/Login';
 
-import { useNavigate } from 'react-router-dom';
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: any;
+}
+
+class ErrorBoundary extends React.Component<any, any> {
+  state = { hasError: false, error: null };
+
+  constructor(props: any) {
+    super(props);
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      let errorMessage = 'An unexpected error occurred.';
+      let errorDetails = '';
+
+      try {
+        // Check if it's a Firestore error JSON string
+        const parsed = JSON.parse(this.state.error.message);
+        if (parsed.error) {
+          errorMessage = `Database Error: ${parsed.error}`;
+          errorDetails = `Operation: ${parsed.operationType} on ${parsed.path}`;
+        }
+      } catch (e) {
+        errorMessage = this.state.error?.message || errorMessage;
+      }
+
+      return (
+        <div className="min-h-screen bg-white flex items-center justify-center p-6">
+          <div className="max-w-md w-full text-center space-y-6">
+            <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto">
+              <X size={40} />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight">Something went wrong</h1>
+            <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-100 text-left">
+              <p className="text-sm font-bold text-red-600 mb-1">{errorMessage}</p>
+              {errorDetails && <p className="text-[10px] text-zinc-400 font-mono">{errorDetails}</p>}
+            </div>
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full bg-black text-white py-4 rounded-xl font-bold hover:bg-zinc-800 transition-colors"
+            >
+              Reload Application
+            </button>
+            <p className="text-xs text-zinc-400">If the problem persists, please contact support.</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (this as any).props.children;
+  }
+}
 
 const StorefrontLayout = ({ children, hideHeaderFooter = false }: { children: React.ReactNode, hideHeaderFooter?: boolean }) => {
   const navigate = useNavigate();
@@ -55,13 +122,26 @@ const StorefrontLayout = ({ children, hideHeaderFooter = false }: { children: Re
 export default function App() {
   return (
     <Router>
-      <AppRoutes />
+      <ErrorBoundary>
+        <AppRoutes />
+      </ErrorBoundary>
     </Router>
   );
 }
 
 function AppRoutes() {
   const navigate = useNavigate();
+  const [subscribed, setSubscribed] = React.useState(false);
+  const [email, setEmail] = React.useState('');
+
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email) {
+      setSubscribed(true);
+      setEmail('');
+      setTimeout(() => setSubscribed(false), 5000);
+    }
+  };
 
   return (
     <Routes>
@@ -76,17 +156,34 @@ function AppRoutes() {
             <div className="container mx-auto px-4">
               <h2 className="text-4xl font-serif mb-8">Join the Vionne Circle</h2>
               <p className="text-white/60 mb-10 max-w-md mx-auto">Receive exclusive early access to new collections and minimalist living tips.</p>
-              <div className="flex max-w-md mx-auto border-b border-white/30 pb-2">
-                <input type="email" placeholder="Email Address" className="bg-transparent border-none outline-none w-full text-sm" />
-                <button className="text-xs font-bold uppercase tracking-widest">Subscribe</button>
-              </div>
+              {subscribed ? (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-emerald-400 font-bold uppercase tracking-[0.2em] text-xs"
+                >
+                  Thank you for subscribing!
+                </motion.div>
+              ) : (
+                <form onSubmit={handleSubscribe} className="flex max-w-md mx-auto border-b border-white/30 pb-2">
+                  <input 
+                    type="email" 
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email Address" 
+                    className="bg-transparent border-none outline-none w-full text-sm" 
+                  />
+                  <button type="submit" className="text-xs font-bold uppercase tracking-widest hover:text-white/70 transition-colors">Subscribe</button>
+                </form>
+              )}
             </div>
           </section>
         </StorefrontLayout>
       } />
       <Route path="/product/:id" element={<StorefrontLayout><ProductPage /></StorefrontLayout>} />
       <Route path="/cart" element={<StorefrontLayout><CartPage onCheckout={() => navigate('/checkout')} onContinueShopping={() => navigate('/')} /></StorefrontLayout>} />
-      <Route path="/checkout" element={<StorefrontLayout hideHeaderFooter><CheckoutPage onBack={() => navigate('/cart')} onComplete={() => {}} /></StorefrontLayout>} />
+      <Route path="/checkout" element={<StorefrontLayout hideHeaderFooter><CheckoutPage onBack={() => navigate('/cart')} onComplete={() => navigate('/')} /></StorefrontLayout>} />
       <Route path="/about" element={<StorefrontLayout><AboutPage /></StorefrontLayout>} />
       <Route path="/contact" element={<StorefrontLayout><ContactPage /></StorefrontLayout>} />
       <Route path="/track-order" element={<StorefrontLayout><TrackOrderPage onBack={() => navigate('/')} /></StorefrontLayout>} />
@@ -97,6 +194,7 @@ function AppRoutes() {
         <Route path="/admin/products" element={<AdminLayout><Products /></AdminLayout>} />
         <Route path="/admin/orders" element={<AdminLayout><Orders /></AdminLayout>} />
         <Route path="/admin/customers" element={<AdminLayout><Customers /></AdminLayout>} />
+        <Route path="/admin/users" element={<AdminLayout><AdminUsers /></AdminLayout>} />
         <Route path="/admin/website" element={<AdminLayout><Settings /></AdminLayout>} />
         <Route path="/admin/settings" element={<AdminLayout><Settings /></AdminLayout>} />
 

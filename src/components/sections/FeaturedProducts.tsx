@@ -40,14 +40,14 @@ export const FeaturedProducts: React.FC<FeaturedProductsProps> = ({ onProductCli
           </div>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-16">
-          {products.slice(0, 6).map((product, index) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16">
+          {products.map((product, index) => (
             <motion.div 
               key={product.id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: (index % 4) * 0.1 }}
               className="group cursor-pointer"
               onClick={() => onProductClick(product)}
             >
@@ -56,6 +56,10 @@ export const FeaturedProducts: React.FC<FeaturedProductsProps> = ({ onProductCli
                   src={product.image || (product.images && product.images[0]) || 'https://picsum.photos/seed/placeholder/400/500'} 
                   alt={product.title}
                   referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = 'https://picsum.photos/seed/placeholder/400/500';
+                  }}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />

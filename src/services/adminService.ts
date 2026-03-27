@@ -46,21 +46,31 @@ const parsePrice = (price: any): number => {
 
 export const adminService = {
   // Products
-  getProducts: (callback: (products: any[]) => void) => {
+  getProducts: (callback: (products: any[]) => void, onError?: (error: any) => void) => {
     const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
     return onSnapshot(q, (snapshot) => {
       const products = snapshot.docs.map(doc => {
         const data = doc.data();
+        const images = Array.isArray(data.images) ? data.images : (typeof data.images === 'string' ? data.images.split(',').map((s: string) => s.trim()) : []);
         return { 
           id: doc.id, 
+          title: data.title || 'Untitled Product',
+          category: data.category || 'Accessories',
+          status: data.status || 'Active',
+          inventory: Number(data.inventory) || 0,
+          description: data.description || '',
+          variants: Array.isArray(data.variants) ? data.variants : ['Default'],
           ...data,
           price: parsePrice(data.price),
-          images: Array.isArray(data.images) ? data.images : (typeof data.images === 'string' ? data.images.split(',').map((s: string) => s.trim()) : []),
-          image: data.image || (Array.isArray(data.images) && data.images.length > 0 ? data.images[0] : (typeof data.images === 'string' && data.images.length > 0 ? data.images.split(',')[0] : 'https://picsum.photos/seed/placeholder/400/500'))
+          images,
+          image: data.image || (images.length > 0 ? images[0] : 'https://picsum.photos/seed/placeholder/400/500')
         };
       });
       callback(products);
-    }, (error) => handleFirestoreError(error, 'list', 'products'));
+    }, (error) => {
+      if (onError) onError(error);
+      handleFirestoreError(error, 'list', 'products');
+    });
   },
 
   addProduct: async (product: any) => {
@@ -127,19 +137,26 @@ export const adminService = {
   },
 
   // Orders
-  getOrders: (callback: (orders: any[]) => void) => {
+  getOrders: (callback: (orders: any[]) => void, onError?: (error: any) => void) => {
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
     return onSnapshot(q, (snapshot) => {
       const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       callback(orders);
-    }, (error) => handleFirestoreError(error, 'list', 'orders'));
+    }, (error) => {
+      if (onError) onError(error);
+      handleFirestoreError(error, 'list', 'orders');
+    });
   },
 
   createOrder: async (order: any) => {
     try {
+      // Generate a simple numeric order ID (e.g., 100000 + random)
+      const shortId = Math.floor(100000 + Math.random() * 900000).toString();
+
       // Add order
       const orderData = {
         ...order,
+        shortId,
         total: parsePrice(order.total),
         items: order.items.map((item: any) => ({
           ...item,
@@ -166,8 +183,8 @@ export const adminService = {
 
       // Send notifications
       notificationService.notifyOrderStatusUpdate({ id: orderRef.id, ...orderData });
-
-      return orderRef;
+      
+      return { id: orderRef.id, shortId };
     } catch (error) {
       handleFirestoreError(error, 'create', 'orders');
     }
@@ -225,12 +242,15 @@ export const adminService = {
   },
 
   // Customers
-  getCustomers: (callback: (customers: any[]) => void) => {
+  getCustomers: (callback: (customers: any[]) => void, onError?: (error: any) => void) => {
     const q = query(collection(db, 'customers'), orderBy('lastOrder', 'desc'));
     return onSnapshot(q, (snapshot) => {
       const customers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       callback(customers);
-    }, (error) => handleFirestoreError(error, 'list', 'customers'));
+    }, (error) => {
+      if (onError) onError(error);
+      handleFirestoreError(error, 'list', 'customers');
+    });
   },
 
   // Settings
@@ -253,6 +273,27 @@ export const adminService = {
       return await updateDoc(docRef, settings);
     } catch (error) {
       handleFirestoreError(error, 'update', 'settings/store');
+    }
+  },
+
+  // Users
+  getUsers: (callback: (users: any[]) => void, onError?: (error: any) => void) => {
+    const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+    return onSnapshot(q, (snapshot) => {
+      const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      callback(users);
+    }, (error) => {
+      if (onError) onError(error);
+      handleFirestoreError(error, 'list', 'users');
+    });
+  },
+
+  updateUserRole: async (uid: string, role: string) => {
+    try {
+      const docRef = doc(db, 'users', uid);
+      return await updateDoc(docRef, { role });
+    } catch (error) {
+      handleFirestoreError(error, 'update', `users/${uid}`);
     }
   }
 };

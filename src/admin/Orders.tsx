@@ -14,7 +14,8 @@ import {
   Mail,
   MapPin,
   CreditCard,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -35,7 +36,7 @@ interface Order {
     image: string;
   }[];
   total: number;
-  status: 'Pending' | 'Shipped' | 'Delivered' | 'Cancelled';
+  status: 'Pending' | 'Confirmed' | 'Shipped' | 'Delivered' | 'Cancelled';
   paymentMethod: 'COD' | 'Credit Card';
   date: string;
   createdAt?: any;
@@ -166,10 +167,12 @@ export const OrderDetails = ({
             <div className={`p-3 rounded-xl ${
               order.status === 'Delivered' ? 'bg-emerald-100 text-emerald-600' :
               order.status === 'Shipped' ? 'bg-blue-100 text-blue-600' : 
+              order.status === 'Confirmed' ? 'bg-indigo-100 text-indigo-600' :
               order.status === 'Cancelled' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'
             }`}>
               {order.status === 'Delivered' ? <CheckCircle2 size={24} /> :
                order.status === 'Shipped' ? <Truck size={24} /> : 
+               order.status === 'Confirmed' ? <CheckCircle2 size={24} /> :
                order.status === 'Cancelled' ? <X size={24} /> : <Clock size={24} />}
             </div>
             <div>
@@ -185,6 +188,7 @@ export const OrderDetails = ({
               className="px-4 py-2 bg-black text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-colors outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="Pending">Pending</option>
+              <option value="Confirmed">Confirmed</option>
               <option value="Shipped">Shipped</option>
               <option value="Delivered">Delivered</option>
               <option value="Cancelled">Cancelled</option>
@@ -319,20 +323,92 @@ export const OrderDetails = ({
         )}
 
         <div className="space-y-4">
-          <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Order Items</h4>
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-400">Order Items</h4>
+            {isEditing && (
+              <button 
+                onClick={() => setEditData({
+                  ...editData,
+                  items: [...editData.items, { title: 'New Item', price: 0, quantity: 1, image: 'https://picsum.photos/seed/placeholder/100/100' }]
+                })}
+                className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 hover:text-emerald-700"
+              >
+                + Add Item
+              </button>
+            )}
+          </div>
           <div className="space-y-4">
-            {order.items.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-4 border border-zinc-100 rounded-2xl">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-xl bg-zinc-50 overflow-hidden border border-zinc-100">
-                    <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+            {editData.items.map((item, idx) => (
+              <div key={idx} className="flex flex-col p-4 border border-zinc-100 rounded-2xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="w-16 h-16 rounded-xl bg-zinc-50 overflow-hidden border border-zinc-100 flex-shrink-0">
+                      <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                    </div>
+                    {isEditing ? (
+                      <div className="flex-1 space-y-2">
+                        <input 
+                          type="text" 
+                          value={item.title}
+                          onChange={(e) => {
+                            const newItems = [...editData.items];
+                            newItems[idx] = { ...item, title: e.target.value };
+                            setEditData({ ...editData, items: newItems });
+                          }}
+                          className="w-full border-b border-zinc-200 py-1 text-sm focus:border-black outline-none transition-colors"
+                          placeholder="Item Title"
+                        />
+                        <div className="flex gap-4">
+                          <div className="flex-1">
+                            <label className="text-[8px] font-bold uppercase tracking-widest text-zinc-400">Price</label>
+                            <input 
+                              type="number" 
+                              value={item.price}
+                              onChange={(e) => {
+                                const newItems = [...editData.items];
+                                newItems[idx] = { ...item, price: parseFloat(e.target.value) || 0 };
+                                setEditData({ ...editData, items: newItems });
+                              }}
+                              className="w-full border-b border-zinc-200 py-1 text-sm focus:border-black outline-none transition-colors"
+                            />
+                          </div>
+                          <div className="w-20">
+                            <label className="text-[8px] font-bold uppercase tracking-widest text-zinc-400">Qty</label>
+                            <input 
+                              type="number" 
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const newItems = [...editData.items];
+                                newItems[idx] = { ...item, quantity: parseInt(e.target.value) || 0 };
+                                setEditData({ ...editData, items: newItems });
+                              }}
+                              className="w-full border-b border-zinc-200 py-1 text-sm focus:border-black outline-none transition-colors"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <h5 className="font-bold text-sm">{item.title}</h5>
+                        <p className="text-xs text-zinc-400 font-medium">₹{(Number(item.price) || 0).toLocaleString('en-IN')} x {item.quantity}</p>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <h5 className="font-bold text-sm">{item.title}</h5>
-                    <p className="text-xs text-zinc-400 font-medium">₹{(Number(item.price) || 0).toLocaleString('en-IN')} x {item.quantity}</p>
-                  </div>
+                  {!isEditing && (
+                    <p className="font-bold text-sm">₹{((Number(item.price) || 0) * item.quantity).toLocaleString('en-IN')}</p>
+                  )}
+                  {isEditing && (
+                    <button 
+                      onClick={() => {
+                        const newItems = editData.items.filter((_, i) => i !== idx);
+                        setEditData({ ...editData, items: newItems });
+                      }}
+                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
-                <p className="font-bold text-sm">₹{((Number(item.price) || 0) * item.quantity).toLocaleString('en-IN')}</p>
               </div>
             ))}
           </div>
@@ -341,7 +417,19 @@ export const OrderDetails = ({
         <div className="pt-6 border-t border-zinc-100 space-y-3">
           <div className="flex justify-between text-sm font-medium text-zinc-500">
             <span>Subtotal</span>
-            <span>₹{(Number(order.total) || 0).toLocaleString('en-IN')}</span>
+            {isEditing ? (
+              <div className="flex items-center gap-2">
+                <span>₹</span>
+                <input 
+                  type="number" 
+                  value={editData.total}
+                  onChange={(e) => setEditData({...editData, total: parseFloat(e.target.value) || 0})}
+                  className="w-24 border-b border-zinc-200 py-1 text-right focus:border-black outline-none transition-colors"
+                />
+              </div>
+            ) : (
+              <span>₹{(Number(order.total) || 0).toLocaleString('en-IN')}</span>
+            )}
           </div>
           <div className="flex justify-between text-sm font-medium text-zinc-500">
             <span>Shipping</span>
@@ -349,7 +437,7 @@ export const OrderDetails = ({
           </div>
           <div className="flex justify-between text-lg font-bold pt-3 border-t border-zinc-50">
             <span>Total</span>
-            <span>₹{(Number(order.total) || 0).toLocaleString('en-IN')}</span>
+            <span>₹{(Number(isEditing ? editData.total : order.total) || 0).toLocaleString('en-IN')}</span>
           </div>
         </div>
       </div>
@@ -371,6 +459,7 @@ export const Orders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('All');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -388,11 +477,14 @@ export const Orders = () => {
   }, []);
 
   const filteredOrders = orders.filter(order => {
+    const orderId = order.id || '';
+    const customerName = order.customer?.name || '';
     const matchesSearch = 
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customer.name.toLowerCase().includes(searchQuery.toLowerCase());
+      orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customerName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesPayment = paymentMethodFilter === 'All' || order.paymentMethod === paymentMethodFilter;
+    return matchesSearch && matchesStatus && matchesPayment;
   });
 
   if (isLoading) {
@@ -446,27 +538,47 @@ export const Orders = () => {
               className="w-full pl-12 pr-4 py-3 rounded-xl bg-zinc-50 border-none outline-none focus:ring-2 focus:ring-black/5 transition-all"
             />
           </div>
-          <div className="flex items-center gap-2 relative">
-            <div className="relative group">
-              <button 
-                onClick={() => setStatusFilter(statusFilter === 'All' ? 'Pending' : 'All')} // Simple toggle for now or better a real dropdown
-                className="hidden" // We will replace the select below
-              />
-            </div>
+          <div className="flex flex-wrap items-center gap-3">
             <div className="relative">
               <select 
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="appearance-none pl-4 pr-10 py-3 rounded-xl border border-zinc-100 text-sm font-bold hover:bg-zinc-50 transition-colors outline-none bg-white cursor-pointer"
+                className="appearance-none pl-4 pr-10 py-3 rounded-xl border border-zinc-100 text-sm font-bold hover:bg-zinc-50 transition-colors outline-none bg-white cursor-pointer min-w-[140px]"
               >
                 <option value="All">All Status</option>
                 <option value="Pending">Pending</option>
+                <option value="Confirmed">Confirmed</option>
                 <option value="Shipped">Shipped</option>
                 <option value="Delivered">Delivered</option>
                 <option value="Cancelled">Cancelled</option>
               </select>
               <Filter className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={14} />
             </div>
+
+            <div className="relative">
+              <select 
+                value={paymentMethodFilter}
+                onChange={(e) => setPaymentMethodFilter(e.target.value)}
+                className="appearance-none pl-4 pr-10 py-3 rounded-xl border border-zinc-100 text-sm font-bold hover:bg-zinc-50 transition-colors outline-none bg-white cursor-pointer min-w-[160px]"
+              >
+                <option value="All">All Payments</option>
+                <option value="COD">COD</option>
+                <option value="Credit Card">Credit Card</option>
+              </select>
+              <CreditCard className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={14} />
+            </div>
+
+            {(statusFilter !== 'All' || paymentMethodFilter !== 'All') && (
+              <button 
+                onClick={() => {
+                  setStatusFilter('All');
+                  setPaymentMethodFilter('All');
+                }}
+                className="text-[10px] font-bold uppercase tracking-widest text-rose-500 hover:text-rose-600 px-2"
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
         </div>
 
@@ -506,11 +618,13 @@ export const Orders = () => {
                     <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                       order.status === 'Delivered' ? 'bg-emerald-50 text-emerald-600' :
                       order.status === 'Shipped' ? 'bg-blue-50 text-blue-600' : 
+                      order.status === 'Confirmed' ? 'bg-indigo-50 text-indigo-600' :
                       order.status === 'Cancelled' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
                     }`}>
                       <div className={`w-1 h-1 rounded-full ${
                         order.status === 'Delivered' ? 'bg-emerald-500' :
                         order.status === 'Shipped' ? 'bg-blue-500' : 
+                        order.status === 'Confirmed' ? 'bg-indigo-500' :
                         order.status === 'Cancelled' ? 'bg-red-500' : 'bg-amber-500'
                       }`} />
                       {order.status}

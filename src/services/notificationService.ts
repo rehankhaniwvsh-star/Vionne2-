@@ -1,5 +1,3 @@
-import { adminService } from './adminService';
-
 export interface NotificationData {
   orderId: string;
   customerName: string;

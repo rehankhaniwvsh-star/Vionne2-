@@ -12,7 +12,8 @@ import {
   UserCheck,
   Globe,
   PieChart as PieIcon,
-  BarChart3
+  BarChart3,
+  X
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -80,7 +81,7 @@ const RecentOrder = ({ id, customer, product, amount, status }: any) => (
       </div>
     </div>
     <div className="text-right">
-      <p className="font-bold text-sm">₹{amount.toLocaleString('en-IN')}</p>
+      <p className="font-bold text-sm">₹{(Number(amount) || 0).toLocaleString('en-IN')}</p>
       <div className="flex items-center gap-1 justify-end">
         <div className={`w-1.5 h-1.5 rounded-full ${
           status === 'Delivered' ? 'bg-emerald-500' : 
@@ -98,21 +99,44 @@ export const Dashboard = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubOrders = adminService.getOrders((data) => setOrders(data));
-    const unsubProducts = adminService.getProducts((data) => setProducts(data));
-    const unsubCustomers = adminService.getCustomers((data) => {
-      setCustomers(data);
+    if (!adminService) {
+      console.error('adminService is not loaded');
+      setError('Admin service failed to initialize.');
       setLoading(false);
-    });
+      return;
+    }
+
+    const handleError = (err: any) => {
+      console.error('Dashboard data error:', err);
+      setError('Failed to load dashboard data. Please check your connection.');
+      setLoading(false);
+    };
+
+    const unsubOrders = adminService.getOrders(
+      (data) => setOrders(Array.isArray(data) ? data : []),
+      handleError
+    );
+    const unsubProducts = adminService.getProducts(
+      (data) => setProducts(Array.isArray(data) ? data : []),
+      handleError
+    );
+    const unsubCustomers = adminService.getCustomers(
+      (data) => {
+        setCustomers(Array.isArray(data) ? data : []);
+        setLoading(false);
+      },
+      handleError
+    );
 
     return () => {
-      unsubOrders();
-      unsubProducts();
-      unsubCustomers();
+      if (typeof unsubOrders === 'function') unsubOrders();
+      if (typeof unsubProducts === 'function') unsubProducts();
+      if (typeof unsubCustomers === 'function') unsubCustomers();
     };
   }, []);
 
@@ -137,6 +161,31 @@ export const Dashboard = () => {
     .map(([name, stats]) => ({ name, ...stats }))
     .sort((a, b) => b.sales - a.sales)
     .slice(0, 5);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-zinc-400 animate-pulse uppercase tracking-widest text-xs font-bold">Loading Dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center">
+          <X size={24} />
+        </div>
+        <p className="text-zinc-500 text-sm">{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="text-xs font-bold underline uppercase tracking-widest"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -314,11 +363,11 @@ export const Dashboard = () => {
           {orders.slice(0, 6).map((order) => (
             <RecentOrder 
               key={order.id}
-              id={`#${order.id.slice(-6).toUpperCase()}`} 
-              customer={order.customer.name} 
+              id={`#${(order.id || '').slice(-6).toUpperCase()}`} 
+              customer={order.customer?.name || 'Unknown'} 
               product={order.items?.[0]?.title || 'Order'} 
-              amount={order.total} 
-              status={order.status} 
+              amount={order.total || 0} 
+              status={order.status || 'Pending'} 
             />
           ))}
         </div>

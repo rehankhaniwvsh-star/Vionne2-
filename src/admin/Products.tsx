@@ -31,388 +31,352 @@ interface Product {
 
 import { adminService } from '../services/adminService';
 
-export const Products = () => {
-  const [products, setProducts] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [isAdding, setIsAdding] = React.useState(false);
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [editingProduct, setEditingProduct] = React.useState<any | null>(null);
-
-  const [selectedCategory, setSelectedCategory] = React.useState('All');
-
-  React.useEffect(() => {
-    const unsubscribe = adminService.getProducts((fetchedProducts) => {
-      setProducts(fetchedProducts);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         p.category?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+const ProductForm = ({ product, onCancel, onSave }: any) => {
+  const [formData, setFormData] = React.useState({
+    title: product?.title || '',
+    price: product?.price?.toString() || '0',
+    inventory: product?.inventory || 0,
+    category: product?.category || 'Accessories',
+    status: product?.status || 'Active',
+    image: product?.image || 'https://picsum.photos/seed/new/200/200',
+    images: Array.isArray(product?.images) ? product.images : [],
+    description: product?.description || '',
+    variants: Array.isArray(product?.variants) ? product.variants : ['Default']
   });
 
-  const [productToDelete, setProductToDelete] = React.useState<string | null>(null);
+  const [imagesText, setImagesText] = React.useState(formData.images?.join('\n') || '');
+  const [variantsText, setVariantsText] = React.useState(formData.variants?.join(', ') || 'Default');
+  const [newImageUrl, setNewImageUrl] = React.useState('');
+  const [isBulkAdding, setIsBulkAdding] = React.useState(false);
+  const [bulkImagesText, setBulkImagesText] = React.useState('');
 
-  const handleDelete = async (id: string) => {
-    setProductToDelete(id);
-  };
-
-  const confirmDelete = async () => {
-    if (productToDelete) {
-      await adminService.deleteProduct(productToDelete);
-      setProductToDelete(null);
+  const addImage = () => {
+    if (newImageUrl && !formData.images.includes(newImageUrl)) {
+      const newImages = [...formData.images, newImageUrl];
+      setFormData({
+        ...formData, 
+        images: newImages,
+        image: formData.image || newImageUrl // Set as main if none exists
+      });
+      setImagesText(newImages.join('\n'));
+      setNewImageUrl('');
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-zinc-400 animate-pulse uppercase tracking-widest text-xs font-bold">Loading Products...</p>
-      </div>
-    );
-  }
-
-  const ProductForm = ({ product, onCancel, onSave }: any) => {
-    const [formData, setFormData] = React.useState({
-      title: product?.title || '',
-      price: product?.price?.toString() || '0',
-      inventory: product?.inventory || 0,
-      category: product?.category || 'Accessories',
-      status: product?.status || 'Active',
-      image: product?.image || 'https://picsum.photos/seed/new/200/200',
-      images: product?.images || [],
-      description: product?.description || '',
-      variants: product?.variants || ['Default']
-    });
-
-    const [imagesText, setImagesText] = React.useState(formData.images?.join('\n') || '');
-    const [variantsText, setVariantsText] = React.useState(formData.variants?.join(', ') || 'Default');
-    const [newImageUrl, setNewImageUrl] = React.useState('');
-    const [isBulkAdding, setIsBulkAdding] = React.useState(false);
-    const [bulkImagesText, setBulkImagesText] = React.useState('');
-
-    const addImage = () => {
-      if (newImageUrl && !formData.images.includes(newImageUrl)) {
-        const newImages = [...formData.images, newImageUrl];
-        setFormData({
-          ...formData, 
-          images: newImages,
-          image: formData.image || newImageUrl // Set as main if none exists
-        });
-        setImagesText(newImages.join('\n'));
-        setNewImageUrl('');
-      }
-    };
-
-    const handleBulkAdd = () => {
-      const urls = bulkImagesText
-        .split(/[\n,]/)
-        .map(url => url.trim())
-        .filter(url => url && url.startsWith('http') && !formData.images.includes(url));
-      
-      if (urls.length > 0) {
-        const newImages = [...formData.images, ...urls];
-        setFormData({
-          ...formData,
-          images: newImages,
-          image: formData.image || urls[0]
-        });
-        setImagesText(newImages.join('\n'));
-        setBulkImagesText('');
-        setIsBulkAdding(false);
-      }
-    };
-
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = e.target.files;
-      if (!files) return;
-
-      Array.from(files).forEach((file: File) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64String = reader.result as string;
-          if (!formData.images.includes(base64String)) {
-            setFormData((prev: any) => {
-              const newImages = [...prev.images, base64String];
-              return {
-                ...prev,
-                images: newImages,
-                image: prev.image || base64String
-              };
-            });
-          }
-        };
-        reader.readAsDataURL(file);
-      });
-    };
-
-    const removeImage = (url: string) => {
-      const newImages = formData.images.filter((img: string) => img !== url);
+  const handleBulkAdd = () => {
+    const urls = bulkImagesText
+      .split(/[\n,]/)
+      .map(url => url.trim())
+      .filter(url => url && url.startsWith('http') && !formData.images.includes(url));
+    
+    if (urls.length > 0) {
+      const newImages = [...formData.images, ...urls];
       setFormData({
         ...formData,
         images: newImages,
-        image: formData.image === url ? (newImages[0] || '') : formData.image
+        image: formData.image || urls[0]
       });
       setImagesText(newImages.join('\n'));
-    };
+      setBulkImagesText('');
+      setIsBulkAdding(false);
+    }
+  };
 
-    const setMainImage = (url: string) => {
-      setFormData({ ...formData, image: url });
-    };
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
 
-    return (
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-8 rounded-2xl border border-zinc-100 shadow-xl max-w-3xl mx-auto w-full max-h-[90vh] overflow-y-auto"
-      >
-        <div className="flex items-center justify-between mb-8">
-          <h3 className="text-xl font-bold">{product ? 'Edit Product' : 'Add New Product'}</h3>
-          <button onClick={onCancel} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
-            <X size={20} />
-          </button>
-        </div>
+    Array.from(files).forEach((file: File) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        if (!formData.images.includes(base64String)) {
+          setFormData((prev: any) => {
+            const newImages = [...prev.images, base64String];
+            return {
+              ...prev,
+              images: newImages,
+              image: prev.image || base64String
+            };
+          });
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Product Title</label>
-              <input 
-                type="text" 
-                value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
-                className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors"
-                placeholder="e.g. Minimalist Watch"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Category</label>
-              <select 
-                value={formData.category}
-                onChange={(e) => setFormData({...formData, category: e.target.value})}
-                className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors appearance-none"
-              >
-                <option>Accessories</option>
-                <option>Apparel</option>
-                <option>Home</option>
-                <option>Lifestyle</option>
-              </select>
-            </div>
-          </div>
+  const removeImage = (url: string) => {
+    const newImages = formData.images.filter((img: string) => img !== url);
+    setFormData({
+      ...formData,
+      images: newImages,
+      image: formData.image === url ? (newImages[0] || '') : formData.image
+    });
+    setImagesText(newImages.join('\n'));
+  };
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Price (₹)</label>
-              <input 
-                type="text" 
-                value={formData.price}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  // Only allow numbers and one decimal point
-                  if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                    setFormData({...formData, price: value});
-                  }
-                }}
-                className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors"
-                placeholder="0.00"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Inventory</label>
-              <input 
-                type="number" 
-                value={formData.inventory}
-                onChange={(e) => setFormData({...formData, inventory: parseInt(e.target.value)})}
-                className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Status</label>
-              <select 
-                value={formData.status}
-                onChange={(e) => setFormData({...formData, status: e.target.value})}
-                className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors appearance-none"
-              >
-                <option>Active</option>
-                <option>Draft</option>
-                <option>Archived</option>
-              </select>
-            </div>
-          </div>
+  const setMainImage = (url: string) => {
+    setFormData({ ...formData, image: url });
+  };
 
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white p-8 rounded-2xl border border-zinc-100 shadow-xl max-w-3xl mx-auto w-full max-h-[90vh] overflow-y-auto"
+    >
+      <div className="flex items-center justify-between mb-8">
+        <h3 className="text-xl font-bold">{product ? 'Edit Product' : 'Add New Product'}</h3>
+        <button onClick={onCancel} className="p-2 hover:bg-zinc-100 rounded-full transition-colors">
+          <X size={20} />
+        </button>
+      </div>
+
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Description (HTML allowed)</label>
-            <textarea 
-              value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
-              className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors min-h-[100px]"
-              placeholder="Product description..."
+            <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Product Title</label>
+            <input 
+              type="text" 
+              value={formData.title}
+              onChange={(e) => setFormData({...formData, title: e.target.value})}
+              className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors"
+              placeholder="e.g. Minimalist Watch"
             />
           </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Category</label>
+            <select 
+              value={formData.category}
+              onChange={(e) => setFormData({...formData, category: e.target.value})}
+              className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors appearance-none"
+            >
+              <option>Accessories</option>
+              <option>Apparel</option>
+              <option>Home</option>
+              <option>Lifestyle</option>
+            </select>
+          </div>
+        </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Product Gallery</label>
-              <div className="flex gap-2">
-                <label className="cursor-pointer px-3 py-1.5 bg-zinc-50 border border-zinc-100 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-100 transition-colors flex items-center gap-2">
-                  <Upload size={12} />
-                  Upload Files
-                  <input 
-                    type="file" 
-                    multiple 
-                    accept="image/*" 
-                    className="hidden" 
-                    onChange={handleFileUpload}
-                  />
-                </label>
-                <button 
-                  type="button"
-                  onClick={() => setIsBulkAdding(!isBulkAdding)}
-                  className="px-3 py-1.5 bg-zinc-50 border border-zinc-100 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-100 transition-colors flex items-center gap-2"
-                >
-                  <FileText size={12} />
-                  Bulk Add URLs
-                </button>
-              </div>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Price (₹)</label>
+            <input 
+              type="text" 
+              value={formData.price}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Only allow numbers and one decimal point
+                if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                  setFormData({...formData, price: value});
+                }
+              }}
+              className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors"
+              placeholder="0.00"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Inventory</label>
+            <input 
+              type="number" 
+              value={formData.inventory}
+              onChange={(e) => setFormData({...formData, inventory: parseInt(e.target.value)})}
+              className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Status</label>
+            <select 
+              value={formData.status}
+              onChange={(e) => setFormData({...formData, status: e.target.value})}
+              className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors appearance-none"
+            >
+              <option>Active</option>
+              <option>Draft</option>
+              <option>Archived</option>
+            </select>
+          </div>
+        </div>
 
-            {isBulkAdding && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="space-y-3 p-4 bg-zinc-50 rounded-xl border border-zinc-100"
-              >
-                <p className="text-[10px] text-zinc-500 font-medium">Paste multiple image URLs separated by commas or new lines.</p>
-                <textarea 
-                  value={bulkImagesText}
-                  onChange={(e) => setBulkImagesText(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors min-h-[100px] text-sm font-mono"
-                  placeholder="https://example.com/img1.jpg, https://example.com/img2.jpg..."
-                />
-                <div className="flex justify-end gap-2">
-                  <button 
-                    type="button"
-                    onClick={() => setIsBulkAdding(false)}
-                    className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-black"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={handleBulkAdd}
-                    className="px-4 py-2 bg-black text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-800"
-                  >
-                    Add All
-                  </button>
-                </div>
-              </motion.div>
-            )}
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Description (HTML allowed)</label>
+          <textarea 
+            value={formData.description}
+            onChange={(e) => setFormData({...formData, description: e.target.value})}
+            className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors min-h-[100px]"
+            placeholder="Product description..."
+          />
+        </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {formData.images.map((url: string, index: number) => (
-                <div key={index} className="relative group aspect-[3/4] rounded-xl overflow-hidden border border-zinc-100 bg-zinc-50">
-                  <img 
-                    src={url} 
-                    alt={`Product ${index}`} 
-                    className="w-full h-full object-cover" 
-                    referrerPolicy="no-referrer" 
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <button 
-                      type="button"
-                      onClick={() => setMainImage(url)}
-                      className={`p-2 rounded-lg transition-colors ${formData.image === url ? 'bg-emerald-500 text-white' : 'bg-white text-black hover:bg-zinc-100'}`}
-                      title="Set as Main Image"
-                    >
-                      <ImageIcon size={16} />
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={() => removeImage(url)}
-                      className="p-2 bg-white text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                      title="Remove Image"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                  {formData.image === url && (
-                    <div className="absolute top-2 left-2 bg-emerald-500 text-white text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded-full shadow-lg">
-                      Main
-                    </div>
-                  )}
-                </div>
-              ))}
-              <div className="aspect-[3/4] rounded-xl border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center p-4 text-center hover:border-zinc-400 transition-colors cursor-pointer group bg-zinc-50/50">
-                <ImageIcon size={24} className="text-zinc-300 group-hover:text-zinc-400 mb-2" />
-                <p className="text-[8px] font-bold uppercase tracking-widest text-zinc-400">Add via URL below</p>
-              </div>
-            </div>
-            
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Product Gallery</label>
             <div className="flex gap-2">
-              <div className="relative flex-grow">
+              <label className="cursor-pointer px-3 py-1.5 bg-zinc-50 border border-zinc-100 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-100 transition-colors flex items-center gap-2">
+                <Upload size={12} />
+                Upload Files
                 <input 
-                  type="text" 
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                  placeholder="Paste image URL from CSV or web..."
-                  className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors text-sm"
+                  type="file" 
+                  multiple 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleFileUpload}
                 />
-              </div>
+              </label>
               <button 
                 type="button"
-                onClick={addImage}
-                className="px-6 py-3 bg-zinc-100 text-black rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all"
+                onClick={() => setIsBulkAdding(!isBulkAdding)}
+                className="px-3 py-1.5 bg-zinc-50 border border-zinc-100 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-100 transition-colors flex items-center gap-2"
               >
-                Add Image
+                <FileText size={12} />
+                Bulk Add URLs
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Variants (comma separated)</label>
-              <input 
-                type="text" 
-                value={variantsText}
-                onChange={(e) => {
-                  setVariantsText(e.target.value);
-                  setFormData({...formData, variants: e.target.value.split(',').map(v => v.trim()).filter(v => v)});
-                }}
-                className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors"
+          {isBulkAdding && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="space-y-3 p-4 bg-zinc-50 rounded-xl border border-zinc-100"
+            >
+              <p className="text-[10px] text-zinc-500 font-medium">Paste multiple image URLs separated by commas or new lines.</p>
+              <textarea 
+                value={bulkImagesText}
+                onChange={(e) => setBulkImagesText(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors min-h-[100px] text-sm font-mono"
+                placeholder="https://example.com/img1.jpg, https://example.com/img2.jpg..."
               />
+              <div className="flex justify-end gap-2">
+                <button 
+                  type="button"
+                  onClick={() => setIsBulkAdding(false)}
+                  className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-black"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleBulkAdd}
+                  className="px-4 py-2 bg-black text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-zinc-800"
+                >
+                  Add All
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {(formData.images || []).map((url: string, index: number) => (
+              <div key={index} className="relative group aspect-[3/4] rounded-xl overflow-hidden border border-zinc-100 bg-zinc-50">
+                <img 
+                  src={url} 
+                  alt={`Product ${index}`} 
+                  className="w-full h-full object-cover" 
+                  referrerPolicy="no-referrer" 
+                />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <button 
+                    type="button"
+                    onClick={() => setMainImage(url)}
+                    className={`p-2 rounded-lg transition-colors ${formData.image === url ? 'bg-emerald-500 text-white' : 'bg-white text-black hover:bg-zinc-100'}`}
+                    title="Set as Main Image"
+                  >
+                    <ImageIcon size={16} />
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => removeImage(url)}
+                    className="p-2 bg-white text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                    title="Remove Image"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+                {formData.image === url && (
+                  <div className="absolute top-2 left-2 bg-emerald-500 text-white text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded-full shadow-lg">
+                    Main
+                  </div>
+                )}
+              </div>
+            ))}
+            <div className="aspect-[3/4] rounded-xl border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center p-4 text-center hover:border-zinc-400 transition-colors cursor-pointer group bg-zinc-50/50">
+              <ImageIcon size={24} className="text-zinc-300 group-hover:text-zinc-400 mb-2" />
+              <p className="text-[8px] font-bold uppercase tracking-widest text-zinc-400">Add via URL below</p>
             </div>
           </div>
-
-          <div className="pt-6 flex gap-4 sticky bottom-0 bg-white pb-2">
+          
+          <div className="flex gap-2">
+            <div className="relative flex-grow">
+              <input 
+                type="text" 
+                value={newImageUrl}
+                onChange={(e) => setNewImageUrl(e.target.value)}
+                placeholder="Paste image URL from CSV or web..."
+                className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors text-sm"
+              />
+            </div>
             <button 
-              onClick={() => {
-                const finalData = {
-                  ...formData,
-                  price: parseFloat(formData.price) || 0
-                };
-                onSave(finalData);
-              }}
-              className="flex-grow bg-black text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-zinc-800 transition-colors"
+              type="button"
+              onClick={addImage}
+              className="px-6 py-3 bg-zinc-100 text-black rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all"
             >
-              <Save size={18} />
-              {product ? 'Update Product' : 'Create Product'}
-            </button>
-            <button 
-              onClick={onCancel}
-              className="px-8 py-4 rounded-xl border border-zinc-100 font-bold hover:bg-zinc-50 transition-colors"
-            >
-              Cancel
+              Add Image
             </button>
           </div>
         </div>
-      </motion.div>
-    );
-  };
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Variants (comma separated)</label>
+            <input 
+              type="text" 
+              value={variantsText}
+              onChange={(e) => {
+                setVariantsText(e.target.value);
+                setFormData({...formData, variants: e.target.value.split(',').map(v => v.trim()).filter(v => v)});
+              }}
+              className="w-full px-4 py-3 rounded-xl border border-zinc-100 focus:border-black outline-none transition-colors"
+            />
+          </div>
+        </div>
+
+        <div className="pt-6 flex gap-4 sticky bottom-0 bg-white pb-2">
+          <button 
+            onClick={() => {
+              const finalData = {
+                ...formData,
+                price: parseFloat(formData.price) || 0
+              };
+              onSave(finalData);
+            }}
+            className="flex-grow bg-black text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-zinc-800 transition-colors"
+          >
+            <Save size={18} />
+            {product ? 'Update Product' : 'Create Product'}
+          </button>
+          <button 
+            onClick={onCancel}
+            className="px-8 py-4 rounded-xl border border-zinc-100 font-bold hover:bg-zinc-50 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+export const Products = () => {
+  const [products, setProducts] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [isAdding, setIsAdding] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [editingProduct, setEditingProduct] = React.useState<any | null>(null);
+  const [selectedCategory, setSelectedCategory] = React.useState('All');
+  const [productToDelete, setProductToDelete] = React.useState<string | null>(null);
   const [isImporting, setIsImporting] = React.useState(false);
   const [importText, setImportText] = React.useState('');
 
@@ -452,6 +416,88 @@ export const Products = () => {
     setIsImporting(false);
     setImportText('');
   };
+
+  React.useEffect(() => {
+    if (!adminService) {
+      console.error('adminService is not loaded');
+      setError('Admin service failed to initialize.');
+      setLoading(false);
+      return;
+    }
+    try {
+      const unsubscribe = adminService.getProducts(
+        (fetchedProducts) => {
+          setProducts(Array.isArray(fetchedProducts) ? fetchedProducts : []);
+          setLoading(false);
+          setError(null);
+        },
+        (err: any) => {
+          console.error('onSnapshot error in Products:', err);
+          setError(err.message || 'Database connection error.');
+          setLoading(false);
+        }
+      );
+      return () => unsubscribe();
+    } catch (err: any) {
+      console.error('Failed to subscribe to products:', err);
+      setError(err.message || 'Failed to load products.');
+      setLoading(false);
+    }
+  }, []);
+
+  const filteredProducts = products.filter(p => {
+    const title = p.title || '';
+    const category = p.category || '';
+    const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         category.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  const handleDelete = async (id: string) => {
+    setProductToDelete(id);
+  };
+
+  const confirmDelete = async () => {
+    if (productToDelete) {
+      await adminService.deleteProduct(productToDelete);
+      setProductToDelete(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-zinc-400 animate-pulse uppercase tracking-widest text-xs font-bold">Loading Products...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    let displayError = error;
+    try {
+      const parsed = JSON.parse(error);
+      if (parsed.error) displayError = parsed.error;
+    } catch (e) {}
+
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-6">
+        <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center">
+          <X size={32} />
+        </div>
+        <div className="text-center">
+          <h3 className="text-xl font-bold mb-2">Failed to Load Products</h3>
+          <p className="text-zinc-500 text-sm max-w-md">{displayError}</p>
+        </div>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-8 py-3 bg-black text-white rounded-xl font-bold hover:bg-zinc-800 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -564,13 +610,23 @@ export const Products = () => {
                 setEditingProduct(null);
               }}
               onSave={async (data: any) => {
-                if (editingProduct) {
-                  await adminService.updateProduct(editingProduct.id, data);
-                } else {
-                  await adminService.addProduct(data);
+                try {
+                  if (editingProduct) {
+                    await adminService.updateProduct(editingProduct.id, data);
+                  } else {
+                    await adminService.addProduct(data);
+                  }
+                  setIsAdding(false);
+                  setEditingProduct(null);
+                } catch (err: any) {
+                  console.error('Failed to save product:', err);
+                  let msg = 'Failed to save product.';
+                  try {
+                    const parsed = JSON.parse(err.message);
+                    if (parsed.error) msg = parsed.error;
+                  } catch (e) {}
+                  alert(msg);
                 }
-                setIsAdding(false);
-                setEditingProduct(null);
               }}
             />
           </div>
@@ -650,7 +706,7 @@ export const Products = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-zinc-500 font-medium">{product.category}</td>
-                  <td className="px-6 py-4 font-bold text-sm">₹{product.price.toLocaleString('en-IN')}</td>
+                  <td className="px-6 py-4 font-bold text-sm">₹{(Number(product.price) || 0).toLocaleString('en-IN')}</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button 

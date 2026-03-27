@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useCart } from '../../../store/useCart';
-import { ChevronLeft, Lock, CreditCard, Truck, CheckCircle, ArrowRight } from 'lucide-react';
+import { ChevronLeft, Lock, CreditCard, Truck, CheckCircle, ArrowRight, Home } from 'lucide-react';
 import { adminService } from '../../../services/adminService';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -16,7 +16,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const shippingFee = cartTotal > 0 && cartTotal < 1000 ? 100 : 0;
+  const shippingFee = 0; // Set to 0 to match CartPage's "Free" shipping and resolve price discrepancy
   const finalTotal = cartTotal + shippingFee;
   const [formData, setFormData] = useState({
     email: '',
@@ -39,7 +39,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
     setIsSubmitting(true);
     setError(null);
     try {
-      const docRef = await adminService.createOrder({
+      const result = await adminService.createOrder({
         customer: {
           name: `${formData.firstName} ${formData.lastName}`,
           email: formData.email,
@@ -58,8 +58,8 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
         paymentMethod
       });
       
-      if (docRef) {
-        setOrderId(docRef.id);
+      if (result) {
+        setOrderId(result.shortId || result.id);
         
         // Backend integration: Call our server to "send" notifications
         try {
@@ -68,7 +68,8 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               orderData: {
-                id: docRef.id,
+                id: result.id,
+                shortId: result.shortId,
                 customer: {
                   email: formData.email,
                   phone: formData.phone
@@ -138,10 +139,16 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
     <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 md:px-8 py-12">
         <div className="flex items-center justify-between mb-16">
-          <button onClick={onBack} className="flex items-center space-x-2 text-[10px] font-bold uppercase tracking-widest hover:text-black/50">
-            <ChevronLeft size={16} />
-            <span>Back to Cart</span>
-          </button>
+          <div className="flex items-center space-x-6">
+            <button onClick={onBack} className="flex items-center space-x-2 text-[10px] font-bold uppercase tracking-widest hover:text-black/50">
+              <ChevronLeft size={16} />
+              <span>Back to Cart</span>
+            </button>
+            <button onClick={() => window.location.href = '/'} className="flex items-center space-x-2 text-[10px] font-bold uppercase tracking-widest hover:text-black/50">
+              <Home size={14} />
+              <span>Home</span>
+            </button>
+          </div>
           <div className="flex items-center space-x-2 text-[10px] font-bold uppercase tracking-widest text-black/40">
             <Lock size={12} />
             <span>Secure Checkout</span>
@@ -282,7 +289,16 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
                 {items.map(item => (
                   <div key={`${item.id}-${item.selectedVariant}`} className="flex items-center space-x-4">
                     <div className="relative w-16 h-20 bg-white flex-shrink-0">
-                      <img src={item.image} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                      <img 
+                        src={item.image} 
+                        alt={item.title} 
+                        referrerPolicy="no-referrer" 
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'https://picsum.photos/seed/placeholder/400/500';
+                        }}
+                        className="w-full h-full object-cover" 
+                      />
                     </div>
                     <div className="flex-1">
                       <h4 className="text-sm font-medium">{item.title}</h4>
@@ -317,11 +333,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-black/60">Shipping</span>
-                  {shippingFee === 0 ? (
-                    <span className="text-green-600 font-bold uppercase text-[10px] tracking-widest">Free</span>
-                  ) : (
-                    <span>₹{shippingFee.toLocaleString('en-IN')}</span>
-                  )}
+                  <span className="text-green-600 font-bold uppercase text-[10px] tracking-widest">Free</span>
                 </div>
                 <div className="pt-4 border-t border-black/5 flex justify-between font-bold text-lg">
                   <span>Total</span>

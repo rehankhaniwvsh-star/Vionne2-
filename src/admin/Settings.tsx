@@ -7,9 +7,13 @@ import {
   Save, 
   Image as ImageIcon,
   Check,
-  AlertCircle
+  AlertCircle,
+  User,
+  ShieldCheck,
+  ShieldAlert
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { adminService } from '../services/adminService';
 
 export const Settings = () => {
   const [activeTab, setActiveTab] = React.useState('website');
@@ -29,7 +33,6 @@ export const Settings = () => {
     { id: 'website', label: 'Website Control', icon: Globe },
     { id: 'payments', label: 'Payments', icon: CreditCard },
     { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'security', label: 'Security', icon: Shield },
   ];
 
   return (

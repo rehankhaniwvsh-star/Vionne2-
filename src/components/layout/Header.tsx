@@ -1,7 +1,10 @@
 import React from 'react';
-import { ShoppingBag, Search, Menu, X } from 'lucide-react';
+import { ShoppingBag, Search, Menu, X, LogOut, LayoutDashboard } from 'lucide-react';
 import { useCart } from '../../store/useCart';
 import { cn } from '../../lib/utils';
+import { auth, db } from '../../firebase';
+import { signOut, onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface HeaderProps {
   onNavigate: (page: string, params?: any) => void;
@@ -11,14 +14,38 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage }) => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
+  const [user, setUser] = React.useState<any>(null);
+  const [isAdmin, setIsAdmin] = React.useState(false);
   const cartItems = useCart(state => state.items);
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   React.useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        setIsAdmin(userDoc.data()?.role === 'admin');
+      } else {
+        setIsAdmin(false);
+      }
+    });
+
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      onNavigate('home');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   const navLinks = [
     { name: 'Home', id: 'home' },
@@ -72,6 +99,24 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage }) => {
             <button className="p-2 hover:text-black/50 transition-colors hidden sm:block">
               <Search size={20} />
             </button>
+            {isAdmin && (
+              <button 
+                onClick={() => onNavigate('admin')}
+                className="p-2 hover:text-black/50 transition-colors hidden sm:block"
+                title="Admin Dashboard"
+              >
+                <LayoutDashboard size={20} />
+              </button>
+            )}
+            {user && (
+              <button 
+                onClick={handleLogout}
+                className="p-2 hover:text-black/50 transition-colors hidden sm:block"
+                title="Logout"
+              >
+                <LogOut size={20} />
+              </button>
+            )}
             <button 
               onClick={() => onNavigate('cart')}
               className="p-2 hover:text-black/50 transition-colors relative"
@@ -111,6 +156,30 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage }) => {
               {link.name}
             </button>
           ))}
+          {isAdmin && (
+            <button
+              onClick={() => {
+                onNavigate('admin');
+                setIsMenuOpen(false);
+              }}
+              className="text-2xl tracking-widest uppercase text-left flex items-center gap-3"
+            >
+              <LayoutDashboard size={24} />
+              Dashboard
+            </button>
+          )}
+          {user && (
+            <button
+              onClick={() => {
+                handleLogout();
+                setIsMenuOpen(false);
+              }}
+              className="text-2xl tracking-widest uppercase text-left flex items-center gap-3 text-red-600"
+            >
+              <LogOut size={24} />
+              Logout
+            </button>
+          )}
         </nav>
       </div>
     </>

@@ -55,7 +55,8 @@ export const Footer: React.FC = () => {
           <p className="text-[10px] text-black/40 uppercase tracking-widest">
             © 2026 VIONNE. All rights reserved.
           </p>
-          <div className="flex space-x-6">
+          <div className="flex items-center space-x-6">
+            <a href="/admin" className="text-[10px] text-black/40 uppercase tracking-widest hover:text-black transition-colors">Admin</a>
             <span className="text-[10px] text-black/40 uppercase tracking-widest">Visa</span>
             <span className="text-[10px] text-black/40 uppercase tracking-widest">Mastercard</span>
             <span className="text-[10px] text-black/40 uppercase tracking-widest">Amex</span>

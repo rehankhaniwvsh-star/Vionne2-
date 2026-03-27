@@ -120,6 +120,10 @@ export const ProductPage: React.FC = () => {
                 src={allImages[activeImage]} 
                 alt={product.title}
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = 'https://picsum.photos/seed/placeholder/400/500';
+                }}
                 className="max-w-full max-h-full object-contain"
               />
 
@@ -166,7 +170,16 @@ export const ProductPage: React.FC = () => {
                     onClick={() => setActiveImage(idx)}
                     className={`aspect-square w-20 md:w-full overflow-hidden bg-[#F5F5F0] border-2 transition-all duration-300 ${activeImage === idx ? 'border-black' : 'border-transparent opacity-60 hover:opacity-100'}`}
                   >
-                    <img src={img} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                    <img 
+                      src={img} 
+                      alt="" 
+                      referrerPolicy="no-referrer" 
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'https://picsum.photos/seed/placeholder/400/500';
+                      }}
+                      className="w-full h-full object-cover" 
+                    />
                   </button>
                 ))}
               </div>
@@ -182,6 +195,10 @@ export const ProductPage: React.FC = () => {
                   src={allImages[activeImage] || 'https://picsum.photos/seed/placeholder/400/500'} 
                   alt={product.title}
                   referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = 'https://picsum.photos/seed/placeholder/400/500';
+                  }}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
               </div>
