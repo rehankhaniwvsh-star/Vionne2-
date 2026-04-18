@@ -460,8 +460,18 @@ export const Products = () => {
 
   const confirmDelete = async () => {
     if (productToDelete) {
-      await adminService.deleteProduct(productToDelete);
-      setProductToDelete(null);
+      try {
+        await adminService.deleteProduct(productToDelete);
+        setProductToDelete(null);
+      } catch (err: any) {
+        console.error('Failed to delete product:', err);
+        let msg = 'Failed to delete product.';
+        try {
+          const parsed = JSON.parse(err.message);
+          if (parsed.error) msg = parsed.error;
+        } catch (e) {}
+        alert(msg);
+      }
     }
   };
 

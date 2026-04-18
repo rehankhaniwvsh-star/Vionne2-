@@ -107,7 +107,8 @@ service cloud.firestore {
     // Products: Publicly readable for storefront, writable only by admin
     match /products/{productId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin() && isValidProduct(request.resource.data);
+      allow create, update: if isAdmin() && isValidProduct(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     // Orders: Createable by anyone (checkout), readable/writable only by admin
@@ -116,7 +117,8 @@ service cloud.firestore {
       allow get: if true;
       allow list: if isAdmin();
       allow create: if isValidOrder(request.resource.data);
-      allow update, delete: if isAdmin() && isValidOrder(request.resource.data);
+      allow update: if isAdmin() && isValidOrder(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     // Customers: Readable by admin, createable/updatable by anyone (checkout analytics)

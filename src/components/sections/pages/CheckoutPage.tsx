@@ -71,9 +71,15 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
                 id: result.id,
                 shortId: result.shortId,
                 customer: {
+                  name: `${formData.firstName} ${formData.lastName}`,
                   email: formData.email,
                   phone: formData.phone
                 },
+                items: items.map(item => ({
+                  title: item.title,
+                  quantity: item.quantity,
+                  price: item.price
+                })),
                 total: finalTotal
               }
             })
@@ -155,10 +161,72 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
+        <div className="flex flex-col lg:grid lg:grid-cols-2 gap-12 lg:gap-20">
+          {/* Order Summary - Shown first on mobile */}
+          <div className="order-1 lg:order-2">
+            <div className="bg-[#F5F5F0] p-6 md:p-10 space-y-8 lg:sticky lg:top-12 rounded-2xl lg:rounded-none">
+              <h2 className="text-xl font-serif tracking-tight">Your Order</h2>
+              <div className="space-y-6 max-h-[30vh] lg:max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                {items.map(item => (
+                  <div key={`${item.id}-${item.selectedVariant}`} className="flex items-center space-x-4">
+                    <div className="relative w-16 h-20 bg-white flex-shrink-0">
+                      <img 
+                        src={item.image} 
+                        alt={item.title} 
+                        referrerPolicy="no-referrer" 
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'https://picsum.photos/seed/placeholder/400/500';
+                        }}
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-medium">{item.title}</h4>
+                      <p className="text-[10px] text-black/40 uppercase tracking-widest">{item.selectedVariant}</p>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <button 
+                          type="button"
+                          onClick={() => updateQuantity(item.id, item.selectedVariant, item.quantity - 1)}
+                          className="w-5 h-5 border border-black/10 flex items-center justify-center text-[10px] hover:bg-black hover:text-white transition-colors"
+                        >
+                          -
+                        </button>
+                        <span className="text-[10px] font-bold w-4 text-center">{item.quantity}</span>
+                        <button 
+                          type="button"
+                          onClick={() => updateQuantity(item.id, item.selectedVariant, item.quantity + 1)}
+                          className="w-5 h-5 border border-black/10 flex items-center justify-center text-[10px] hover:bg-black hover:text-white transition-colors"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    <span className="text-sm font-medium">₹{((Number(item.price) || 0) * item.quantity).toLocaleString('en-IN')}</span>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="space-y-4 pt-8 border-t border-black/5">
+                <div className="flex justify-between text-sm">
+                  <span className="text-black/60">Subtotal</span>
+                  <span>₹{cartTotal.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-black/60">Shipping</span>
+                  <span className="text-green-600 font-bold uppercase text-[10px] tracking-widest">Free</span>
+                </div>
+                <div className="pt-4 border-t border-black/5 flex justify-between font-bold text-lg">
+                  <span>Total</span>
+                  <span>₹{finalTotal.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Checkout Form */}
-          <div className="space-y-12">
-            <form onSubmit={handleSubmit} className="space-y-12">
+          <div className="order-2 lg:order-1 space-y-12">
+            <form onSubmit={handleSubmit} className="space-y-12 pb-24 lg:pb-0">
               <section className="space-y-6">
                 <h2 className="text-xl font-serif tracking-tight">Contact Information</h2>
                 {error && (
@@ -274,73 +342,22 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
               <button 
                 type="submit"
                 disabled={isSubmitting || items.length === 0}
-                className="w-full bg-black text-white py-5 text-xs font-bold uppercase tracking-widest hover:bg-black/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="hidden lg:block w-full bg-black text-white py-5 text-xs font-bold uppercase tracking-widest hover:bg-black/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Processing...' : `Complete Order — ₹${finalTotal.toLocaleString('en-IN')}`}
               </button>
-            </form>
-          </div>
 
-          {/* Order Summary Sidebar */}
-          <div className="hidden lg:block">
-            <div className="bg-[#F5F5F0] p-10 space-y-8 sticky top-12">
-              <h2 className="text-xl font-serif tracking-tight">Your Order</h2>
-              <div className="space-y-6 max-h-[40vh] overflow-y-auto pr-4">
-                {items.map(item => (
-                  <div key={`${item.id}-${item.selectedVariant}`} className="flex items-center space-x-4">
-                    <div className="relative w-16 h-20 bg-white flex-shrink-0">
-                      <img 
-                        src={item.image} 
-                        alt={item.title} 
-                        referrerPolicy="no-referrer" 
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = 'https://picsum.photos/seed/placeholder/400/500';
-                        }}
-                        className="w-full h-full object-cover" 
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-sm font-medium">{item.title}</h4>
-                      <p className="text-[10px] text-black/40 uppercase tracking-widest">{item.selectedVariant}</p>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <button 
-                          type="button"
-                          onClick={() => updateQuantity(item.id, item.selectedVariant, item.quantity - 1)}
-                          className="w-5 h-5 border border-black/10 flex items-center justify-center text-[10px] hover:bg-black hover:text-white transition-colors"
-                        >
-                          -
-                        </button>
-                        <span className="text-[10px] font-bold w-4 text-center">{item.quantity}</span>
-                        <button 
-                          type="button"
-                          onClick={() => updateQuantity(item.id, item.selectedVariant, item.quantity + 1)}
-                          className="w-5 h-5 border border-black/10 flex items-center justify-center text-[10px] hover:bg-black hover:text-white transition-colors"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                    <span className="text-sm font-medium">₹{((Number(item.price) || 0) * item.quantity).toLocaleString('en-IN')}</span>
-                  </div>
-                ))}
+              {/* Mobile Sticky CTA */}
+              <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white p-4 border-t border-black/5 z-50">
+                <button 
+                  type="submit"
+                  disabled={isSubmitting || items.length === 0}
+                  className="w-full bg-black text-white py-4 text-xs font-bold uppercase tracking-widest hover:bg-black/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl"
+                >
+                  {isSubmitting ? 'Processing...' : `Complete Order — ₹${finalTotal.toLocaleString('en-IN')}`}
+                </button>
               </div>
-              
-              <div className="space-y-4 pt-8 border-t border-black/5">
-                <div className="flex justify-between text-sm">
-                  <span className="text-black/60">Subtotal</span>
-                  <span>₹{cartTotal.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-black/60">Shipping</span>
-                  <span className="text-green-600 font-bold uppercase text-[10px] tracking-widest">Free</span>
-                </div>
-                <div className="pt-4 border-t border-black/5 flex justify-between font-bold text-lg">
-                  <span>Total</span>
-                  <span>₹{finalTotal.toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-            </div>
+            </form>
           </div>
         </div>
       </div>
