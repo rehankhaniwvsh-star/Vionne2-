@@ -295,5 +295,295 @@ export const adminService = {
     } catch (error) {
       handleFirestoreError(error, 'update', `users/${uid}`);
     }
+  },
+
+  seedInitialData: async () => {
+    try {
+      const productsSnap = await getDocs(collection(db, 'products'));
+      
+      // If we have products, check if we need to purge the old templates and upgrade to dropshipping products
+      let shouldSeed = false;
+      if (productsSnap.empty) {
+        shouldSeed = true;
+      } else {
+        // Look for any old product title like 'Vionne Silk Scarf' to see if this is an un-migrated store
+        const hasOldProduct = productsSnap.docs.some(doc => {
+          const title = doc.data().title;
+          return title === 'Vionne Silk Scarf' || title === 'Minimalist Timepiece' || title === 'Leather Portfolio' || title === 'Ceramic Vase Set';
+        });
+        
+        if (hasOldProduct) {
+          console.log('Old placeholder products detected. Purging to make room for high-converting dropship products...');
+          for (const docSnap of productsSnap.docs) {
+            await deleteDoc(doc(db, 'products', docSnap.id));
+          }
+          shouldSeed = true;
+        }
+      }
+
+      if (shouldSeed) {
+        console.log('Seeding initial dropshipping products...');
+        const initialProducts = [
+          {
+            title: 'AuraGlow Smart Sunset Lamp',
+            price: 1499,
+            inventory: 120,
+            category: 'Smart Living',
+            status: 'Active',
+            description: 'Transform any room into a cinematic sunset oasis. Features 16 dynamic colors, adjustable brightness, and smart App/Remote control. Perfect for content creators, cozy aesthetic vibes, and bedroom upgrades.',
+            image: 'https://images.unsplash.com/photo-1617043786394-f977fa12eddf?w=800',
+            images: [
+              'https://images.unsplash.com/photo-1617043786394-f977fa12eddf?w=800',
+              'https://images.unsplash.com/photo-1507646227500-4d389b0012be?w=800',
+              'https://images.unsplash.com/photo-1565814636199-ae8133055c1c?w=800'
+            ],
+            variants: ['Sunset Orange', 'Cosmic Purple', 'Solar Red']
+          },
+          {
+            title: 'HydroPulse Portable Blender',
+            price: 2299,
+            inventory: 85,
+            category: 'Wellness Tech',
+            status: 'Active',
+            description: 'Blend your favorite protein shakes, wellness smoothies, or fruit juices on the go. Equipped with a high-speed 6-blade stainless steel motor, USB-C rechargeable battery, and a sleek, leak-proof, self-cleaning design.',
+            image: 'https://images.unsplash.com/photo-1578643463396-0997cb5328c1?w=800',
+            images: [
+              'https://images.unsplash.com/photo-1578643463396-0997cb5328c1?w=800',
+              'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=800'
+            ],
+            variants: ['Soft Mint', 'Chalk White', 'Blush Pink']
+          },
+          {
+            title: 'SonicVibe Sleep Mask Headphones',
+            price: 1899,
+            inventory: 150,
+            category: 'Lifestyle',
+            status: 'Active',
+            description: 'Block out 100% of light and noise for deep, restorative sleep. Features ultra-thin, comfortable HD speakers embedded in a breathable, contoured memory-foam mask. Bluetooth 5.2 connectivity with 10+ hours of continuous play.',
+            image: 'https://images.unsplash.com/photo-1541140111954-78af4c37ad2c?w=800',
+            images: [
+              'https://images.unsplash.com/photo-1541140111954-78af4c37ad2c?w=800',
+              'https://images.unsplash.com/photo-1511295742364-92767fa62d9f?w=800'
+            ],
+            variants: ['Obsidian Black', 'Slate Gray', 'Cloud White']
+          }
+        ];
+        
+        for (const product of initialProducts) {
+          await addDoc(collection(db, 'products'), {
+            ...product,
+            createdAt: Timestamp.now()
+          });
+        }
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Seeding failed:', error);
+      return false;
+    }
+  },
+
+  forceResetAndSeedDropshipData: async () => {
+    try {
+      console.log('Starting total store reset and dropshipping re-creation...');
+
+      // 1. Purge all current collections
+      const collectionsToPurge = ['products', 'orders', 'customers'];
+      for (const colName of collectionsToPurge) {
+        const snap = await getDocs(collection(db, colName));
+        for (const docSnap of snap.docs) {
+          await deleteDoc(doc(db, colName, docSnap.id));
+        }
+      }
+
+      // 2. Add dropshipping products with detailed multi-category parameters
+      const initialProducts = [
+        {
+          title: 'AuraGlow Smart Sunset Lamp',
+          price: 1499,
+          inventory: 120,
+          category: 'Smart Living',
+          status: 'Active',
+          description: 'Transform any room into a cinematic sunset oasis. Features 16 dynamic colors, adjustable brightness, and smart App/Remote control. Perfect for content creators, cozy aesthetic vibes, and bedroom upgrades.',
+          image: 'https://images.unsplash.com/photo-1617043786394-f977fa12eddf?w=800',
+          images: [
+            'https://images.unsplash.com/photo-1617043786394-f977fa12eddf?w=800',
+            'https://images.unsplash.com/photo-1507646227500-4d389b0012be?w=800',
+            'https://images.unsplash.com/photo-1565814636199-ae8133055c1c?w=800'
+          ],
+          variants: ['Sunset Orange', 'Cosmic Purple', 'Solar Red']
+        },
+        {
+          title: 'HydroPulse Portable Blender',
+          price: 2299,
+          inventory: 85,
+          category: 'Wellness Tech',
+          status: 'Active',
+          description: 'Blend your favorite protein shakes, wellness smoothies, or fruit juices on the go. Equipped with a high-speed 6-blade stainless steel motor, USB-C rechargeable battery, and a sleek, leak-proof, self-cleaning design.',
+          image: 'https://images.unsplash.com/photo-1578643463396-0997cb5328c1?w=800',
+          images: [
+            'https://images.unsplash.com/photo-1578643463396-0997cb5328c1?w=800',
+            'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=800'
+          ],
+          variants: ['Soft Mint', 'Chalk White', 'Blush Pink']
+        },
+        {
+          title: 'SonicVibe Sleep Mask Headphones',
+          price: 1899,
+          inventory: 150,
+          category: 'Lifestyle',
+          status: 'Active',
+          description: 'Block out 100% of light and noise for deep, restorative sleep. Features ultra-thin, comfortable HD speakers embedded in a breathable, contoured memory-foam mask. Bluetooth 5.2 connectivity with 10+ hours of continuous play.',
+          image: 'https://images.unsplash.com/photo-1541140111954-78af4c37ad2c?w=800',
+          images: [
+            'https://images.unsplash.com/photo-1541140111954-78af4c37ad2c?w=800',
+            'https://images.unsplash.com/photo-1511295742364-92767fa62d9f?w=800'
+          ],
+          variants: ['Obsidian Black', 'Slate Gray', 'Cloud White']
+        }
+      ];
+
+      const productRefs: any[] = [];
+      for (const product of initialProducts) {
+        const ref = await addDoc(collection(db, 'products'), {
+          ...product,
+          createdAt: Timestamp.now()
+        });
+        productRefs.push({ id: ref.id, ...product });
+      }
+
+      // 3. Seed 4 realistic customer profiles with realistic orders across different dates & statuses
+      const sampleOrders = [
+        {
+          customer: {
+            name: 'Aarav Sharma',
+            email: 'aarav.sharma@gmail.com',
+            phone: '+91 98765 43210',
+            address: 'Flat 405, Block B, Prestige Heights, Bangalore, KA - 560001'
+          },
+          items: [
+            {
+              id: productRefs[0].id,
+              title: productRefs[0].title,
+              price: productRefs[0].price,
+              image: productRefs[0].image,
+              quantity: 1,
+              variant: 'Sunset Orange'
+            }
+          ],
+          total: productRefs[0].price,
+          status: 'Delivered',
+          daysAgo: 5
+        },
+        {
+          customer: {
+            name: 'Priya Patel',
+            email: 'priya.patel@gmail.com',
+            phone: '+91 99887 76655',
+            address: 'House 12, Sector 15, Noida, UP - 201301'
+          },
+          items: [
+            {
+              id: productRefs[1].id,
+              title: productRefs[1].title,
+              price: productRefs[1].price,
+              image: productRefs[1].image,
+              quantity: 1,
+              variant: 'Blush Pink'
+            }
+          ],
+          total: productRefs[1].price,
+          status: 'Shipped',
+          daysAgo: 2
+        },
+        {
+          customer: {
+            name: 'Rohan Das',
+            email: 'rohan.das@gmail.com',
+            phone: '+91 91234 56789',
+            address: '56/A Gariahat Road, Kolkata, WB - 700019'
+          },
+          items: [
+            {
+              id: productRefs[2].id,
+              title: productRefs[2].title,
+              price: productRefs[2].price,
+              image: productRefs[2].image,
+              quantity: 2,
+              variant: 'Obsidian Black'
+            }
+          ],
+          total: productRefs[2].price * 2,
+          status: 'Pending',
+          daysAgo: 1
+        },
+        {
+          customer: {
+            name: 'Ananya Iyer',
+            email: 'ananya.iyer@gmail.com',
+            phone: '+91 98123 45678',
+            address: 'Apt 2B, Rutland Gate 4th Street, Chennai, TN - 600006'
+          },
+          items: [
+            {
+              id: productRefs[0].id,
+              title: productRefs[0].title,
+              price: productRefs[0].price,
+              image: productRefs[0].image,
+              quantity: 1,
+              variant: 'Cosmic Purple'
+            },
+            {
+              id: productRefs[2].id,
+              title: productRefs[2].title,
+              price: productRefs[2].price,
+              image: productRefs[2].image,
+              quantity: 1,
+              variant: 'Slate Gray'
+            }
+          ],
+          total: productRefs[0].price + productRefs[2].price,
+          status: 'Delivered',
+          daysAgo: 10
+        }
+      ];
+
+      for (const sample of sampleOrders) {
+        const shortId = Math.floor(100000 + Math.random() * 900000).toString();
+        const date = new Date();
+        date.setDate(date.getDate() - sample.daysAgo);
+        
+        const orderData = {
+          customer: sample.customer,
+          items: sample.items,
+          total: sample.total,
+          status: sample.status,
+          shortId,
+          createdAt: Timestamp.fromDate(date)
+        };
+
+        await addDoc(collection(db, 'orders'), orderData);
+
+        // Seed Customer stats
+        const customerEmail = sample.customer.email.toLowerCase();
+        const customerDocRef = doc(db, 'customers', customerEmail);
+        await setDoc(customerDocRef, {
+          name: sample.customer.name,
+          email: customerEmail,
+          phone: sample.customer.phone,
+          address: sample.customer.address,
+          totalSpent: increment(sample.total),
+          ordersCount: increment(1),
+          lastOrder: Timestamp.fromDate(date)
+        }, { merge: true });
+      }
+
+      console.log('Store re-creation completed successfully!');
+      return true;
+    } catch (error) {
+      console.error('Force reseed failed:', error);
+      return false;
+    }
   }
 };

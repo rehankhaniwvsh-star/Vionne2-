@@ -24,13 +24,13 @@ import { useCart } from './store/useCart';
 
 // Admin Imports
 import { AdminLayout } from './admin/AdminLayout';
-import { Dashboard } from './admin/Dashboard';
-import { Products } from './admin/Products';
-import { Orders } from './admin/Orders';
-import { Customers } from './admin/Customers';
-import { Users as AdminUsers } from './admin/Users';
-import { Settings } from './admin/Settings';
-import { Login } from './admin/Login';
+import { DashboardPage } from './admin/pages/DashboardPage';
+import { ProductsPage } from './admin/pages/ProductsPage';
+import { OrdersPage } from './admin/pages/OrdersPage';
+import { CustomersPage } from './admin/pages/CustomersPage';
+import { AnalyticsPage } from './admin/pages/AnalyticsPage';
+import { SettingsPage } from './admin/pages/SettingsPage';
+import { LoginPage } from './admin/pages/LoginPage';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -189,14 +189,13 @@ function AppRoutes() {
       <Route path="/track-order" element={<StorefrontLayout><TrackOrderPage onBack={() => navigate('/')} /></StorefrontLayout>} />
 
         {/* Admin Routes */}
-        <Route path="/admin/login" element={<Login />} />
-        <Route path="/admin" element={<AdminLayout><Dashboard /></AdminLayout>} />
-        <Route path="/admin/products" element={<AdminLayout><Products /></AdminLayout>} />
-        <Route path="/admin/orders" element={<AdminLayout><Orders /></AdminLayout>} />
-        <Route path="/admin/customers" element={<AdminLayout><Customers /></AdminLayout>} />
-        <Route path="/admin/users" element={<AdminLayout><AdminUsers /></AdminLayout>} />
-        <Route path="/admin/website" element={<AdminLayout><Settings /></AdminLayout>} />
-        <Route path="/admin/settings" element={<AdminLayout><Settings /></AdminLayout>} />
+        <Route path="/admin/login" element={<LoginPage />} />
+        <Route path="/admin" element={<AdminLayout><DashboardPage /></AdminLayout>} />
+        <Route path="/admin/products" element={<AdminLayout><ProductsPage /></AdminLayout>} />
+        <Route path="/admin/orders" element={<AdminLayout><OrdersPage /></AdminLayout>} />
+        <Route path="/admin/customers" element={<AdminLayout><CustomersPage /></AdminLayout>} />
+        <Route path="/admin/analytics" element={<AdminLayout><AnalyticsPage /></AdminLayout>} />
+        <Route path="/admin/settings" element={<AdminLayout><SettingsPage /></AdminLayout>} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

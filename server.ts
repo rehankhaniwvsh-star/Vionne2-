@@ -14,7 +14,11 @@ async function startServer() {
 
   app.use(express.json());
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const getResendClient = () => {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return null;
+    return new Resend(apiKey);
+  };
 
   const getTwilioClient = () => {
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -33,13 +37,13 @@ async function startServer() {
     
     console.log("Processing order:", orderData);
     
-    const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    const resend = getResendClient();
     const twilioClient = getTwilioClient();
     const twilioFrom = process.env.TWILIO_WHATSAPP_NUMBER;
     const adminPhone = process.env.ADMIN_WHATSAPP_NUMBER;
 
     // --- Email Logic ---
-    if (RESEND_API_KEY) {
+    if (resend) {
       try {
         const itemsHtml = orderData.items.map((item: any) => 
           `<li>${item.title} x ${item.quantity} - ₹${item.price.toLocaleString('en-IN')}</li>`

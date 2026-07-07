@@ -6,20 +6,20 @@ export const Testimonials: React.FC = () => {
   const testimonials = [
     {
       name: "Sarah Jenkins",
-      role: "Interior Designer",
-      text: "Vionne has become my go-to for minimalist decor. The quality of the ceramic pieces is exceptional, and the customer service is truly premium.",
+      role: "Content Creator",
+      text: "The AuraGlow Sunset Lamp completely transformed my bedroom studio. The smart app is so intuitive, and the cozy aesthetic on my stream is unmatched!",
       rating: 5
     },
     {
       name: "Michael Chen",
-      role: "Architect",
-      text: "The aesthetic of these products is perfectly aligned with modern architectural principles. Clean lines, honest materials, and beautiful finishes.",
+      role: "Fitness Coach",
+      text: "The HydroPulse Portable Blender is a absolute game-changer. I blend my protein smoothies right at the gym. High speed, easy self-cleaning, and beautiful minimalist design.",
       rating: 5
     },
     {
       name: "Elena Rodriguez",
-      role: "Homeowner",
-      text: "I was skeptical about dropshipping stores, but Vionne is different. The packaging was beautiful and the product exceeded my expectations.",
+      role: "Remote Worker",
+      text: "I used to struggle with midday light during naps, but the SonicVibe Sleep Mask is incredibly soft and blocks 100% of light. The built-in speakers are super thin and comfortable!",
       rating: 5
     }
   ];

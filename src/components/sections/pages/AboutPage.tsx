@@ -35,10 +35,10 @@ export const AboutPage: React.FC = () => {
             <div className="space-y-8">
               <h2 className="text-3xl font-serif tracking-tight">The Vionne Philosophy</h2>
               <p className="text-black/60 leading-relaxed text-lg">
-                Founded in 2024, Vionne was born from a simple desire: to strip away the noise and focus on what truly matters. We believe that your environment profoundly impacts your well-being.
+                Founded in 2024, Vionne was born from a simple desire: to strip away the noise and bring smart, beautiful upgrades directly to your life. We believe that your home and daily accessories should elevate your mood, health, and focus.
               </p>
               <p className="text-black/60 leading-relaxed">
-                Our curated collection of home essentials is designed with a "less is more" approach. We source only the highest quality materials, ensuring that every piece is not just beautiful, but built to last.
+                Our curated collection of modern essentials is hand-selected with a "smart design, peak comfort" approach. We partner with state-of-the-art manufacturers worldwide to bring trending innovations directly to your doorstep with free express shipping.
               </p>
             </div>
           </section>

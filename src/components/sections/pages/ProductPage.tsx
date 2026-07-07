@@ -15,6 +15,8 @@ export const ProductPage: React.FC = () => {
   const [activeImage, setActiveImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(true);
+  const [isShippingOpen, setIsShippingOpen] = useState(false);
   const addItem = useCart(state => state.addItem);
 
   useEffect(() => {
@@ -298,16 +300,48 @@ export const ProductPage: React.FC = () => {
             {/* Expandable Details (Simplified) */}
             <div className="space-y-4 pt-10">
               <div className="border-t border-black/5 pt-4">
-                <button className="w-full flex justify-between items-center text-xs font-bold uppercase tracking-widest">
+                <button 
+                  onClick={() => setIsDetailsOpen(!isDetailsOpen)}
+                  className="w-full flex justify-between items-center text-xs font-bold uppercase tracking-widest text-left"
+                >
                   <span>Product Details</span>
-                  <Plus size={14} />
+                  {isDetailsOpen ? <Minus size={14} /> : <Plus size={14} />}
                 </button>
+                {isDetailsOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="mt-4 text-xs text-black/60 leading-relaxed space-y-2"
+                  >
+                    <p>Designed for premium quality, peak performance, and absolute ease of use.</p>
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li>Premium grade materials ensuring long-term durability</li>
+                      <li>Smart ergonomic design optimized for everyday utility</li>
+                      <li>Easy-to-clean and maintain components</li>
+                      <li>Includes standard accessories and multi-lingual instruction manual</li>
+                    </ul>
+                  </motion.div>
+                )}
               </div>
               <div className="border-t border-black/5 pt-4">
-                <button className="w-full flex justify-between items-center text-xs font-bold uppercase tracking-widest">
+                <button 
+                  onClick={() => setIsShippingOpen(!isShippingOpen)}
+                  className="w-full flex justify-between items-center text-xs font-bold uppercase tracking-widest text-left"
+                >
                   <span>Shipping & Returns</span>
-                  <Plus size={14} />
+                  {isShippingOpen ? <Minus size={14} /> : <Plus size={14} />}
                 </button>
+                {isShippingOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="mt-4 text-xs text-black/60 leading-relaxed space-y-2"
+                  >
+                    <p><strong>📦 Free Express Shipping:</strong> We provide 100% free premium shipping on all orders. Your order will be dispatched within 24-48 hours.</p>
+                    <p><strong>⏳ Estimated Delivery:</strong> 3-5 business days depending on location. Full tracking information is emailed as soon as the package ships.</p>
+                    <p><strong>🔄 Hassle-Free Returns:</strong> We stand by our products. If you are not 100% satisfied, you can return the item within 30 days for a full, stress-free refund.</p>
+                  </motion.div>
+                )}
               </div>
             </div>
           </div>

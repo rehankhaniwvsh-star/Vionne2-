@@ -5,7 +5,11 @@ import twilio from "twilio";
 const app = express();
 app.use(express.json());
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const getResendClient = () => {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+  return new Resend(apiKey);
+};
 
 // Twilio Client initialized lazily (see guide)
 const getTwilioClient = () => {
@@ -25,13 +29,13 @@ app.post("/api/checkout", async (req, res) => {
   
   console.log("Processing order:", orderData);
   
-  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  const resend = getResendClient();
   const twilioClient = getTwilioClient();
   const twilioFrom = process.env.TWILIO_WHATSAPP_NUMBER; // e.g., 'whatsapp:+14155238886'
   const adminPhone = process.env.ADMIN_WHATSAPP_NUMBER; // e.g., 'whatsapp:+91...'
 
   // --- Email Logic ---
-  if (RESEND_API_KEY) {
+  if (resend) {
     try {
       const itemsHtml = orderData.items.map((item: any) => 
         `<li>${item.title} x ${item.quantity} - ₹${item.price.toLocaleString('en-IN')}</li>`
