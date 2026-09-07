@@ -1,5 +1,8 @@
 {
-  "name": "Vionne Admin Dashboard",
-  "description": "A premium e-commerce admin panel for managing products, orders, and customers for the Vionne brand.",
-  "requestFramePermissions": []
+  "name": "Vionne — High-Conversion E-Commerce & Checkout",
+  "description": "High-conversion product storefront and bold, comprehensive checkout experience with Online Payment Gateway (UPI, Cards, NetBanking, Wallets) and Cash on Delivery (COD) workflows.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

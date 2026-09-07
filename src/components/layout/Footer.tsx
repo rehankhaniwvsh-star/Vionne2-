@@ -1,66 +1,111 @@
-import React from 'react';
-import { Instagram, Twitter, Facebook } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, Globe } from 'lucide-react';
 
 export const Footer: React.FC = () => {
+  const [email, setEmail] = useState('');
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email.trim()) {
+      setIsSubscribed(true);
+      setEmail('');
+      setTimeout(() => setIsSubscribed(false), 4000);
+    }
+  };
+
   return (
-    <footer className="bg-[#F5F5F0] pt-20 pb-10 border-t border-black/5">
+    <footer className="bg-[#111613] text-zinc-200 pt-16 pb-10 border-t border-zinc-800">
       <div className="container mx-auto px-4 md:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-          <div className="space-y-6">
-            <h3 className="text-2xl font-serif tracking-tighter">VIONNE</h3>
-            <p className="text-sm text-black/60 leading-relaxed max-w-xs">
-              Curating premium essentials for the modern home. Minimalist design, maximum quality.
+        {/* Community Newsletter Section from screenshot */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-end pb-14 border-b border-zinc-800/80">
+          <div className="md:col-span-6 space-y-2">
+            <h3 className="text-3xl md:text-4xl font-serif font-normal tracking-tight text-zinc-100">
+              join our kitchen community
+            </h3>
+            <p className="text-xs text-zinc-400 font-light">
+              Receive fresh ideas and exclusive offers weekly.
             </p>
-            <div className="flex space-x-4">
-              <Instagram size={20} className="text-black/60 hover:text-black cursor-pointer transition-colors" />
-              <Twitter size={20} className="text-black/60 hover:text-black cursor-pointer transition-colors" />
-              <Facebook size={20} className="text-black/60 hover:text-black cursor-pointer transition-colors" />
-            </div>
-          </div>
-          
-          <div>
-            <h4 className="text-xs font-bold uppercase tracking-widest mb-6">Shop</h4>
-            <ul className="space-y-4 text-sm text-black/60">
-              <li><a href="#" className="hover:text-black transition-colors">Featured Products</a></li>
-              <li><a href="#" className="hover:text-black transition-colors">New Arrivals</a></li>
-              <li><a href="#" className="hover:text-black transition-colors">Gift Cards</a></li>
-            </ul>
           </div>
 
-          <div>
-            <h4 className="text-xs font-bold uppercase tracking-widest mb-6">Support</h4>
-            <ul className="space-y-4 text-sm text-black/60">
-              <li><a href="#" className="hover:text-black transition-colors">Shipping Policy</a></li>
-              <li><a href="#" className="hover:text-black transition-colors">Refund Policy</a></li>
-              <li><a href="#" className="hover:text-black transition-colors">Contact Us</a></li>
-              <li><a href="#" className="hover:text-black transition-colors">FAQ</a></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-xs font-bold uppercase tracking-widest mb-6">Newsletter</h4>
-            <p className="text-sm text-black/60 mb-4">Subscribe to receive updates, access to exclusive deals, and more.</p>
-            <div className="flex border-b border-black pb-2">
-              <input 
-                type="email" 
-                placeholder="Enter your email" 
-                className="bg-transparent border-none outline-none text-sm w-full"
-              />
-              <button className="text-xs font-bold uppercase tracking-widest">Join</button>
-            </div>
+          <div className="md:col-span-6">
+            {isSubscribed ? (
+              <div className="flex items-center space-x-2 text-emerald-400 text-xs py-2">
+                <Check size={16} />
+                <span>Thank you! You're on the list for our latest recipes and offers.</span>
+              </div>
+            ) : (
+              <form onSubmit={handleSubscribe} className="flex items-center border-b border-zinc-500 pb-2">
+                <input 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email address" 
+                  required
+                  className="bg-transparent border-none outline-none text-xs text-zinc-100 placeholder:text-zinc-500 w-full py-1"
+                />
+                <button 
+                  type="submit" 
+                  className="text-xs font-medium tracking-wide text-zinc-300 hover:text-white transition-colors whitespace-nowrap pl-4"
+                >
+                  Sign up
+                </button>
+              </form>
+            )}
           </div>
         </div>
-        
-        <div className="pt-10 border-t border-black/5 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-          <p className="text-[10px] text-black/40 uppercase tracking-widest">
-            © 2026 VIONNE. All rights reserved.
-          </p>
-          <div className="flex items-center space-x-6">
-            <a href="/admin" className="text-[10px] text-black/40 uppercase tracking-widest hover:text-black transition-colors">Admin</a>
-            <span className="text-[10px] text-black/40 uppercase tracking-widest">Visa</span>
-            <span className="text-[10px] text-black/40 uppercase tracking-widest">Mastercard</span>
-            <span className="text-[10px] text-black/40 uppercase tracking-widest">Amex</span>
-            <span className="text-[10px] text-black/40 uppercase tracking-widest">PayPal</span>
+
+        {/* Links Navigation */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-10 border-b border-zinc-800/80 text-xs text-zinc-400">
+          <div className="space-y-3">
+            <h4 className="font-serif text-sm text-zinc-200 font-medium">VIONNE</h4>
+            <p className="text-[11px] leading-relaxed text-zinc-500">
+              Thoughtfully curated kitchen and living essentials designed for effortless modern cooking.
+            </p>
+          </div>
+          <div>
+            <h5 className="text-[11px] uppercase tracking-wider text-zinc-300 font-semibold mb-3">Shop</h5>
+            <ul className="space-y-2.5">
+              <li><a href="#featured-products" className="hover:text-white transition-colors">2-in-1 Oil Dispenser</a></li>
+              <li><a href="#featured-products" className="hover:text-white transition-colors">Kitchen & Living</a></li>
+              <li><a href="#featured-products" className="hover:text-white transition-colors">New Arrivals</a></li>
+            </ul>
+          </div>
+          <div>
+            <h5 className="text-[11px] uppercase tracking-wider text-zinc-300 font-semibold mb-3">Customer Care</h5>
+            <ul className="space-y-2.5">
+              <li><a href="#" className="hover:text-white transition-colors">Track Your Shipment</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Shipping & Delivery</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">30-Day Easy Returns</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Warranty Claim</a></li>
+            </ul>
+          </div>
+          <div>
+            <h5 className="text-[11px] uppercase tracking-wider text-zinc-300 font-semibold mb-3">Contact Us</h5>
+            <p className="text-[11px] text-zinc-500 leading-relaxed">
+              Have questions? Our support team is available Mon-Sat, 9AM-7PM IST.<br />
+              <span className="text-zinc-300">support@vionne.com</span>
+            </p>
+          </div>
+        </div>
+
+        {/* Bottom Bar matching Canyon footer */}
+        <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-[11px] text-zinc-500">
+          <div className="flex items-center space-x-4">
+            <span className="text-zinc-400">© 2026 VIONNE. All rights reserved.</span>
+            <span>•</span>
+            <span className="text-zinc-400">Privacy & Terms</span>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-300">
+              <span>🇮🇳</span>
+              <span>IN ₹</span>
+            </div>
+            <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-300">
+              <Globe size={12} />
+              <span>EN</span>
+            </div>
           </div>
         </div>
       </div>

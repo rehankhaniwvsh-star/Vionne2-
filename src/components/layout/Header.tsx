@@ -56,74 +56,96 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, currentPage }) => {
 
   return (
     <>
-      <div className="bg-black text-white py-2 text-center text-xs tracking-widest uppercase">
-        🚚 Free Shipping on All Orders
+      <div className="bg-[#8f9e83] text-white py-2.5 text-center text-xs tracking-wide font-medium">
+        Shop our latest arrivals
       </div>
       <header 
         className={cn(
           "sticky top-0 z-50 w-full transition-all duration-300 border-b",
-          isScrolled ? "bg-white/80 backdrop-blur-md py-3 border-black/5" : "bg-white py-5 border-transparent"
+          isScrolled ? "bg-white/95 backdrop-blur-md py-3.5 border-zinc-200/80 shadow-xs" : "bg-white py-4 border-zinc-100"
         )}
       >
         <div className="container mx-auto px-4 md:px-8 flex items-center justify-between">
-          <button 
-            className="md:hidden p-2"
-            onClick={() => setIsMenuOpen(true)}
-          >
-            <Menu size={20} />
-          </button>
-
-          <nav className="hidden md:flex items-center space-x-8">
-            {navLinks.map(link => (
-              <button
-                key={link.id}
-                onClick={() => onNavigate(link.id)}
-                className={cn(
-                  "text-sm tracking-widest uppercase transition-colors hover:text-black/50",
-                  currentPage === link.id ? "text-black font-medium" : "text-black/70"
-                )}
-              >
-                {link.name}
-              </button>
-            ))}
-          </nav>
+          <div className="flex items-center space-x-3">
+            <button 
+              className="p-1.5 text-zinc-800 hover:text-black transition-colors"
+              onClick={() => setIsMenuOpen(true)}
+              aria-label="Toggle menu"
+            >
+              <Menu size={20} strokeWidth={1.8} />
+            </button>
+            <button 
+              onClick={() => {
+                const el = document.getElementById('featured-products');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                else onNavigate('home');
+              }}
+              className="p-1.5 text-zinc-800 hover:text-black transition-colors"
+              title="Search store"
+            >
+              <Search size={19} strokeWidth={1.8} />
+            </button>
+          </div>
 
           <button 
             onClick={() => onNavigate('home')}
-            className="text-2xl font-serif tracking-tighter absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0"
+            className="text-2xl md:text-3xl font-serif tracking-tight text-zinc-900 absolute left-1/2 -translate-x-1/2 font-medium hover:opacity-85 transition-opacity"
           >
             VIONNE
           </button>
 
-          <div className="flex items-center space-x-4">
-            <button className="p-2 hover:text-black/50 transition-colors hidden sm:block">
-              <Search size={20} />
-            </button>
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            <nav className="hidden lg:flex items-center space-x-6 mr-2">
+              {navLinks.map(link => (
+                <button
+                  key={link.id}
+                  onClick={() => onNavigate(link.id)}
+                  className={cn(
+                    "text-xs tracking-wider uppercase transition-colors hover:text-black",
+                    currentPage === link.id ? "text-black font-semibold" : "text-zinc-500 font-medium"
+                  )}
+                >
+                  {link.name}
+                </button>
+              ))}
+            </nav>
+
             {isAdmin && (
               <button 
                 onClick={() => onNavigate('admin')}
-                className="p-2 hover:text-black/50 transition-colors hidden sm:block"
+                className="p-1.5 text-zinc-700 hover:text-black transition-colors hidden sm:block"
                 title="Admin Dashboard"
               >
-                <LayoutDashboard size={20} />
+                <LayoutDashboard size={19} strokeWidth={1.8} />
               </button>
             )}
-            {user && (
+            {user ? (
               <button 
                 onClick={handleLogout}
-                className="p-2 hover:text-black/50 transition-colors hidden sm:block"
+                className="p-1.5 text-zinc-700 hover:text-black transition-colors"
                 title="Logout"
               >
-                <LogOut size={20} />
+                <LogOut size={19} strokeWidth={1.8} />
+              </button>
+            ) : (
+              <button 
+                onClick={() => onNavigate('admin')}
+                className="p-1.5 text-zinc-700 hover:text-black transition-colors hidden sm:block"
+                title="Account / Admin"
+              >
+                <svg className="w-[19px] h-[19px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
               </button>
             )}
             <button 
               onClick={() => onNavigate('cart')}
-              className="p-2 hover:text-black/50 transition-colors relative"
+              className="p-1.5 text-zinc-800 hover:text-black transition-colors relative"
+              aria-label="View Cart"
             >
-              <ShoppingBag size={20} />
+              <ShoppingBag size={20} strokeWidth={1.8} />
               {cartCount > 0 && (
-                <span className="absolute top-0 right-0 bg-black text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-[#28402c] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {cartCount}
                 </span>
               )}

@@ -5,21 +5,21 @@ import { motion } from 'motion/react';
 export const Testimonials: React.FC = () => {
   const testimonials = [
     {
-      name: "Sarah Jenkins",
-      role: "Content Creator",
-      text: "The AuraGlow Sunset Lamp completely transformed my bedroom studio. The smart app is so intuitive, and the cozy aesthetic on my stream is unmatched!",
+      name: "Pooja Sharma",
+      role: "Home Decorator",
+      text: "The X4cart Touch Control LED Lamp gives the warmest, coziest bedside light. The 3 color modes and dimming are so effortless to use at night!",
       rating: 5
     },
     {
-      name: "Michael Chen",
-      role: "Fitness Coach",
-      text: "The HydroPulse Portable Blender is a absolute game-changer. I blend my protein smoothies right at the gym. High speed, easy self-cleaning, and beautiful minimalist design.",
+      name: "Dr. Ananya Rao",
+      role: "Wellness Enthusiast",
+      text: "The 2 in 1 Oil Dispenser & Sprayer is a lifesaver for healthy cooking and air frying. Controlling oil to 0.15g per mist makes macro tracking seamless.",
       rating: 5
     },
     {
-      name: "Elena Rodriguez",
-      role: "Remote Worker",
-      text: "I used to struggle with midday light during naps, but the SonicVibe Sleep Mask is incredibly soft and blocks 100% of light. The built-in speakers are super thin and comfortable!",
+      name: "Ritu Kapoor",
+      role: "Architect",
+      text: "The Wall-Mounted Hair Tool Organizer cleared my bathroom counter completely. It safely holds my hot blow dryer, flat iron, and brushes right after styling.",
       rating: 5
     }
   ];

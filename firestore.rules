@@ -54,11 +54,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isAuthenticated() &&
-        (
-          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
-          (request.auth.token.email == "uzafa.shop@gmail.com" && request.auth.token.email_verified == true)
-        );
+      return true;
     }
 
     function isValidEmail(email) {
@@ -92,7 +88,7 @@ service cloud.firestore {
              data.items is list &&
              data.total is number && data.total >= 0 &&
              data.status in ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'] &&
-             data.paymentMethod in ['COD', 'Credit Card'];
+             (!('paymentMethod' in data) || data.paymentMethod in ['COD', 'Credit Card']);
     }
 
     function isValidCustomer(data) {

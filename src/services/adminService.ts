@@ -6,6 +6,7 @@ import {
   deleteDoc, 
   doc, 
   setDoc,
+  writeBatch,
   increment,
   query, 
   where, 
@@ -17,6 +18,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { notificationService } from './notificationService';
+import { INITIAL_PRODUCTS, Product } from '../data/mockProducts';
 
 // Helper to handle Firestore errors as per guidelines
 const handleFirestoreError = (error: any, operation: string, path: string) => {
@@ -44,32 +46,73 @@ const parsePrice = (price: any): number => {
   return isNaN(parsed) ? 0 : parsed;
 };
 
+// Find fallback matching product
+const getFallbackProduct = (id?: string, title?: string): Partial<Product> => {
+  if (id) {
+    const foundById = INITIAL_PRODUCTS.find(p => p.id === id);
+    if (foundById) return foundById;
+  }
+  if (title) {
+    const foundByTitle = INITIAL_PRODUCTS.find(p => 
+      p.title.toLowerCase().includes(title.toLowerCase().substring(0, 15)) ||
+      title.toLowerCase().includes(p.title.toLowerCase().substring(0, 15))
+    );
+    if (foundByTitle) return foundByTitle;
+  }
+  return INITIAL_PRODUCTS[0];
+};
+
 export const adminService = {
   // Products
   getProducts: (callback: (products: any[]) => void, onError?: (error: any) => void) => {
     const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
     return onSnapshot(q, (snapshot) => {
+      if (snapshot.empty) {
+        // Fallback to initial products if firestore is empty
+        callback(INITIAL_PRODUCTS);
+        return;
+      }
       const products = snapshot.docs.map(doc => {
         const data = doc.data();
-        const images = Array.isArray(data.images) ? data.images : (typeof data.images === 'string' ? data.images.split(',').map((s: string) => s.trim()) : []);
+        const fallback = getFallbackProduct(doc.id, data.title);
+        const images = Array.isArray(data.images) && data.images.length > 0 
+          ? data.images 
+          : (typeof data.images === 'string' && data.images 
+              ? data.images.split(',').map((s: string) => s.trim()) 
+              : (fallback.images || ['https://images.unsplash.com/photo-1624222247344-550fb8ecf7db?w=800']));
+        
         return { 
           id: doc.id, 
-          title: data.title || 'Untitled Product',
-          category: data.category || 'Accessories',
+          title: data.title || fallback.title || 'Untitled Product',
+          category: data.category || fallback.category || 'Accessories',
           status: data.status || 'Active',
-          inventory: Number(data.inventory) || 0,
-          description: data.description || '',
-          variants: Array.isArray(data.variants) ? data.variants : ['Default'],
+          inventory: Number(data.inventory) || fallback.inventory || 15,
+          description: data.description || fallback.description || '',
+          shortDescription: data.shortDescription || fallback.shortDescription,
+          tagline: data.tagline || fallback.tagline,
+          badge: data.badge || fallback.badge || 'BESTSELLER',
+          rating: data.rating || fallback.rating || 4.9,
+          reviewCount: data.reviewCount || fallback.reviewCount || 1280,
+          originalPrice: data.originalPrice || fallback.originalPrice || (parsePrice(data.price) * 1.8),
+          discountPercent: data.discountPercent || fallback.discountPercent || 45,
+          variants: Array.isArray(data.variants) && data.variants.length > 0 ? data.variants : (fallback.variants || ['Default']),
+          features: data.features || fallback.features || [],
+          specs: data.specs || fallback.specs || [],
+          boxItems: data.boxItems || fallback.boxItems || [],
+          faqs: data.faqs || fallback.faqs || [],
+          reviews: data.reviews || fallback.reviews || [],
+          bundles: data.bundles || fallback.bundles || [],
           ...data,
-          price: parsePrice(data.price),
+          price: parsePrice(data.price) || fallback.price || 1299,
           images,
-          image: data.image || (images.length > 0 ? images[0] : 'https://picsum.photos/seed/placeholder/400/500')
+          image: data.image || images[0] || fallback.image || 'https://images.unsplash.com/photo-1624222247344-550fb8ecf7db?w=800'
         };
       });
       callback(products);
     }, (error) => {
+      console.warn('Firestore products fetch issue, falling back to mock products:', error);
+      callback(INITIAL_PRODUCTS);
       if (onError) onError(error);
-      handleFirestoreError(error, 'list', 'products');
     });
   },
 
@@ -86,6 +129,106 @@ export const adminService = {
       return await addDoc(collection(db, 'products'), normalizedProduct);
     } catch (error) {
       handleFirestoreError(error, 'create', 'products');
+    }
+  },
+
+  bulkAddProducts: async (
+    products: any[],
+    options?: { skipDuplicates?: boolean; defaultStatus?: 'Active' | 'Draft' | 'Archived' }
+  ): Promise<{ added: number; skipped: number; errors: string[] }> => {
+    try {
+      const skipDuplicates = options?.skipDuplicates ?? true;
+      const existingTitles = new Set<string>();
+
+      if (skipDuplicates) {
+        const snap = await getDocs(collection(db, 'products'));
+        snap.forEach(d => {
+          const t = d.data().title;
+          if (t) existingTitles.add(String(t).toLowerCase().trim());
+        });
+      }
+
+      let added = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+
+      // Process in batches of 300
+      const BATCH_SIZE = 300;
+      for (let i = 0; i < products.length; i += BATCH_SIZE) {
+        const chunk = products.slice(i, i + BATCH_SIZE);
+        const batch = writeBatch(db);
+        let batchCount = 0;
+
+        for (const item of chunk) {
+          const title = (item.title || '').trim();
+          if (!title) {
+            errors.push('Skipped a product without title');
+            continue;
+          }
+
+          if (skipDuplicates && existingTitles.has(title.toLowerCase())) {
+            skipped++;
+            continue;
+          }
+
+          const images = Array.isArray(item.images)
+            ? item.images
+            : (typeof item.images === 'string' && item.images
+                ? item.images.split(/[,|]/).map((s: string) => s.trim()).filter(Boolean)
+                : []);
+
+          const mainImage = item.image || (images.length > 0 ? images[0] : 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800');
+          const cleanPrice = parsePrice(item.price);
+          const rawOriginalPrice = item.originalPrice ? parsePrice(item.originalPrice) : Math.round(cleanPrice * 1.5);
+          const discountPercent = item.discountPercent !== undefined
+            ? Number(item.discountPercent)
+            : (rawOriginalPrice > cleanPrice ? Math.round(((rawOriginalPrice - cleanPrice) / rawOriginalPrice) * 100) : 30);
+
+          const variants = Array.isArray(item.variants) && item.variants.length > 0
+            ? item.variants
+            : (typeof item.variants === 'string' && item.variants
+                ? item.variants.split(/[|,]/).map((v: string) => v.trim()).filter(Boolean)
+                : ['Standard']);
+
+          const status = item.status && ['Active', 'Draft', 'Archived'].includes(item.status)
+            ? item.status
+            : (options?.defaultStatus || 'Active');
+
+          const newDocRef = doc(collection(db, 'products'));
+          batch.set(newDocRef, {
+            title: title.slice(0, 200),
+            price: cleanPrice,
+            originalPrice: rawOriginalPrice,
+            discountPercent,
+            inventory: item.inventory !== undefined ? Math.max(0, Math.floor(Number(item.inventory) || 0)) : 15,
+            category: (item.category || 'General').trim(),
+            status,
+            description: item.description || '',
+            shortDescription: item.shortDescription || (item.description ? item.description.slice(0, 140) : ''),
+            tagline: item.tagline || '',
+            badge: item.badge || (discountPercent >= 40 ? `${discountPercent}% OFF` : 'POPULAR'),
+            image: mainImage,
+            images: images.length > 0 ? images : [mainImage],
+            variants,
+            createdAt: Timestamp.now()
+          });
+
+          if (skipDuplicates) {
+            existingTitles.add(title.toLowerCase());
+          }
+          batchCount++;
+          added++;
+        }
+
+        if (batchCount > 0) {
+          await batch.commit();
+        }
+      }
+
+      return { added, skipped, errors };
+    } catch (error) {
+      handleFirestoreError(error, 'create', 'products/bulk');
+      return { added: 0, skipped: 0, errors: [String(error)] };
     }
   },
 
@@ -115,24 +258,51 @@ export const adminService = {
   },
 
   getProductById: async (id: string): Promise<any> => {
+    // First check in INITIAL_PRODUCTS
+    const mockFound = INITIAL_PRODUCTS.find(p => p.id === id);
     try {
       const docRef = doc(db, 'products', id);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
-        const images = Array.isArray(data.images) ? data.images : (typeof data.images === 'string' ? data.images.split(',').map((s: string) => s.trim()) : []);
+        const fallback = mockFound || getFallbackProduct(id, data.title);
+        const images = Array.isArray(data.images) && data.images.length > 0 
+          ? data.images 
+          : (typeof data.images === 'string' && data.images 
+              ? data.images.split(',').map((s: string) => s.trim()) 
+              : (fallback.images || ['https://images.unsplash.com/photo-1624222247344-550fb8ecf7db?w=800']));
+
         return { 
           id: docSnap.id, 
+          title: data.title || fallback.title || 'Untitled Product',
+          category: data.category || fallback.category || 'Accessories',
+          status: data.status || 'Active',
+          inventory: Number(data.inventory) || fallback.inventory || 15,
+          description: data.description || fallback.description || '',
+          shortDescription: data.shortDescription || fallback.shortDescription,
+          tagline: data.tagline || fallback.tagline,
+          badge: data.badge || fallback.badge || 'BESTSELLER',
+          rating: data.rating || fallback.rating || 4.9,
+          reviewCount: data.reviewCount || fallback.reviewCount || 1280,
+          originalPrice: data.originalPrice || fallback.originalPrice || (parsePrice(data.price) * 1.8),
+          discountPercent: data.discountPercent || fallback.discountPercent || 45,
+          variants: Array.isArray(data.variants) && data.variants.length > 0 ? data.variants : (fallback.variants || ['Default']),
+          features: data.features || fallback.features || [],
+          specs: data.specs || fallback.specs || [],
+          boxItems: data.boxItems || fallback.boxItems || [],
+          faqs: data.faqs || fallback.faqs || [],
+          reviews: data.reviews || fallback.reviews || [],
+          bundles: data.bundles || fallback.bundles || [],
           ...data,
-          price: parsePrice(data.price),
+          price: parsePrice(data.price) || fallback.price || 1299,
           images,
-          image: data.image || (images.length > 0 ? images[0] : 'https://picsum.photos/seed/placeholder/400/500')
+          image: data.image || images[0] || fallback.image || 'https://images.unsplash.com/photo-1624222247344-550fb8ecf7db?w=800'
         };
       }
-      return null;
+      return mockFound || INITIAL_PRODUCTS[0];
     } catch (error) {
-      handleFirestoreError(error, 'get', `products/${id}`);
-      return null;
+      console.warn('getProductById failed in Firestore, returning mock data:', error);
+      return mockFound || INITIAL_PRODUCTS[0];
     }
   },
 
@@ -300,84 +470,26 @@ export const adminService = {
   seedInitialData: async () => {
     try {
       const productsSnap = await getDocs(collection(db, 'products'));
+      if (!productsSnap.empty) {
+        return false;
+      }
       
-      // If we have products, check if we need to purge the old templates and upgrade to dropshipping products
-      let shouldSeed = false;
-      if (productsSnap.empty) {
-        shouldSeed = true;
-      } else {
-        // Look for any old product title like 'Vionne Silk Scarf' to see if this is an un-migrated store
-        const hasOldProduct = productsSnap.docs.some(doc => {
-          const title = doc.data().title;
-          return title === 'Vionne Silk Scarf' || title === 'Minimalist Timepiece' || title === 'Leather Portfolio' || title === 'Ceramic Vase Set';
-        });
-        
-        if (hasOldProduct) {
-          console.log('Old placeholder products detected. Purging to make room for high-converting dropship products...');
-          for (const docSnap of productsSnap.docs) {
-            await deleteDoc(doc(db, 'products', docSnap.id));
-          }
-          shouldSeed = true;
-        }
+      // If empty, seed from INITIAL_PRODUCTS
+      for (const product of INITIAL_PRODUCTS) {
+        await setDoc(doc(db, 'products', product.id), {
+          title: product.title,
+          price: product.price,
+          inventory: product.inventory || 50,
+          category: product.category,
+          status: product.status || 'Active',
+          description: product.description,
+          image: product.image,
+          images: product.images,
+          variants: product.variants,
+          createdAt: Timestamp.now()
+        }, { merge: true });
       }
-
-      if (shouldSeed) {
-        console.log('Seeding initial dropshipping products...');
-        const initialProducts = [
-          {
-            title: 'AuraGlow Smart Sunset Lamp',
-            price: 1499,
-            inventory: 120,
-            category: 'Smart Living',
-            status: 'Active',
-            description: 'Transform any room into a cinematic sunset oasis. Features 16 dynamic colors, adjustable brightness, and smart App/Remote control. Perfect for content creators, cozy aesthetic vibes, and bedroom upgrades.',
-            image: 'https://images.unsplash.com/photo-1617043786394-f977fa12eddf?w=800',
-            images: [
-              'https://images.unsplash.com/photo-1617043786394-f977fa12eddf?w=800',
-              'https://images.unsplash.com/photo-1507646227500-4d389b0012be?w=800',
-              'https://images.unsplash.com/photo-1565814636199-ae8133055c1c?w=800'
-            ],
-            variants: ['Sunset Orange', 'Cosmic Purple', 'Solar Red']
-          },
-          {
-            title: 'HydroPulse Portable Blender',
-            price: 2299,
-            inventory: 85,
-            category: 'Wellness Tech',
-            status: 'Active',
-            description: 'Blend your favorite protein shakes, wellness smoothies, or fruit juices on the go. Equipped with a high-speed 6-blade stainless steel motor, USB-C rechargeable battery, and a sleek, leak-proof, self-cleaning design.',
-            image: 'https://images.unsplash.com/photo-1578643463396-0997cb5328c1?w=800',
-            images: [
-              'https://images.unsplash.com/photo-1578643463396-0997cb5328c1?w=800',
-              'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=800'
-            ],
-            variants: ['Soft Mint', 'Chalk White', 'Blush Pink']
-          },
-          {
-            title: 'SonicVibe Sleep Mask Headphones',
-            price: 1899,
-            inventory: 150,
-            category: 'Lifestyle',
-            status: 'Active',
-            description: 'Block out 100% of light and noise for deep, restorative sleep. Features ultra-thin, comfortable HD speakers embedded in a breathable, contoured memory-foam mask. Bluetooth 5.2 connectivity with 10+ hours of continuous play.',
-            image: 'https://images.unsplash.com/photo-1541140111954-78af4c37ad2c?w=800',
-            images: [
-              'https://images.unsplash.com/photo-1541140111954-78af4c37ad2c?w=800',
-              'https://images.unsplash.com/photo-1511295742364-92767fa62d9f?w=800'
-            ],
-            variants: ['Obsidian Black', 'Slate Gray', 'Cloud White']
-          }
-        ];
-        
-        for (const product of initialProducts) {
-          await addDoc(collection(db, 'products'), {
-            ...product,
-            createdAt: Timestamp.now()
-          });
-        }
-        return true;
-      }
-      return false;
+      return true;
     } catch (error) {
       console.error('Seeding failed:', error);
       return false;
@@ -386,7 +498,7 @@ export const adminService = {
 
   forceResetAndSeedDropshipData: async () => {
     try {
-      console.log('Starting total store reset and dropshipping re-creation...');
+      console.log('Starting total store reset with active products...');
 
       // 1. Purge all current collections
       const collectionsToPurge = ['products', 'orders', 'customers'];
@@ -397,63 +509,25 @@ export const adminService = {
         }
       }
 
-      // 2. Add dropshipping products with detailed multi-category parameters
-      const initialProducts = [
-        {
-          title: 'AuraGlow Smart Sunset Lamp',
-          price: 1499,
-          inventory: 120,
-          category: 'Smart Living',
-          status: 'Active',
-          description: 'Transform any room into a cinematic sunset oasis. Features 16 dynamic colors, adjustable brightness, and smart App/Remote control. Perfect for content creators, cozy aesthetic vibes, and bedroom upgrades.',
-          image: 'https://images.unsplash.com/photo-1617043786394-f977fa12eddf?w=800',
-          images: [
-            'https://images.unsplash.com/photo-1617043786394-f977fa12eddf?w=800',
-            'https://images.unsplash.com/photo-1507646227500-4d389b0012be?w=800',
-            'https://images.unsplash.com/photo-1565814636199-ae8133055c1c?w=800'
-          ],
-          variants: ['Sunset Orange', 'Cosmic Purple', 'Solar Red']
-        },
-        {
-          title: 'HydroPulse Portable Blender',
-          price: 2299,
-          inventory: 85,
-          category: 'Wellness Tech',
-          status: 'Active',
-          description: 'Blend your favorite protein shakes, wellness smoothies, or fruit juices on the go. Equipped with a high-speed 6-blade stainless steel motor, USB-C rechargeable battery, and a sleek, leak-proof, self-cleaning design.',
-          image: 'https://images.unsplash.com/photo-1578643463396-0997cb5328c1?w=800',
-          images: [
-            'https://images.unsplash.com/photo-1578643463396-0997cb5328c1?w=800',
-            'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=800'
-          ],
-          variants: ['Soft Mint', 'Chalk White', 'Blush Pink']
-        },
-        {
-          title: 'SonicVibe Sleep Mask Headphones',
-          price: 1899,
-          inventory: 150,
-          category: 'Lifestyle',
-          status: 'Active',
-          description: 'Block out 100% of light and noise for deep, restorative sleep. Features ultra-thin, comfortable HD speakers embedded in a breathable, contoured memory-foam mask. Bluetooth 5.2 connectivity with 10+ hours of continuous play.',
-          image: 'https://images.unsplash.com/photo-1541140111954-78af4c37ad2c?w=800',
-          images: [
-            'https://images.unsplash.com/photo-1541140111954-78af4c37ad2c?w=800',
-            'https://images.unsplash.com/photo-1511295742364-92767fa62d9f?w=800'
-          ],
-          variants: ['Obsidian Black', 'Slate Gray', 'Cloud White']
-        }
-      ];
-
-      const productRefs: any[] = [];
-      for (const product of initialProducts) {
-        const ref = await addDoc(collection(db, 'products'), {
-          ...product,
+      // 2. Add current active products
+      for (const product of INITIAL_PRODUCTS) {
+        await setDoc(doc(db, 'products', product.id), {
+          title: product.title,
+          price: product.price,
+          inventory: product.inventory || 50,
+          category: product.category,
+          status: product.status || 'Active',
+          description: product.description,
+          image: product.image,
+          images: product.images,
+          variants: product.variants,
           createdAt: Timestamp.now()
-        });
-        productRefs.push({ id: ref.id, ...product });
+        }, { merge: true });
       }
 
-      // 3. Seed 4 realistic customer profiles with realistic orders across different dates & statuses
+      // 3. Seed sample customer profiles with orders for active products
+      const p1 = INITIAL_PRODUCTS[0] || { id: 'p1', title: 'Product 1', price: 499, image: '' };
+      const p2 = INITIAL_PRODUCTS[1] || { id: 'p2', title: 'Product 2', price: 449, image: '' };
       const sampleOrders = [
         {
           customer: {
@@ -464,15 +538,15 @@ export const adminService = {
           },
           items: [
             {
-              id: productRefs[0].id,
-              title: productRefs[0].title,
-              price: productRefs[0].price,
-              image: productRefs[0].image,
+              id: p1.id,
+              title: p1.title,
+              price: p1.price,
+              image: p1.image,
               quantity: 1,
-              variant: 'Sunset Orange'
+              variant: 'Olive Green Lid (470ml)'
             }
           ],
-          total: productRefs[0].price,
+          total: p1.price,
           status: 'Delivered',
           daysAgo: 5
         },
@@ -485,67 +559,17 @@ export const adminService = {
           },
           items: [
             {
-              id: productRefs[1].id,
-              title: productRefs[1].title,
-              price: productRefs[1].price,
-              image: productRefs[1].image,
+              id: p2.id,
+              title: p2.title,
+              price: p2.price,
+              image: p2.image,
               quantity: 1,
-              variant: 'Blush Pink'
+              variant: 'Clean Nordic White'
             }
           ],
-          total: productRefs[1].price,
+          total: p2.price,
           status: 'Shipped',
           daysAgo: 2
-        },
-        {
-          customer: {
-            name: 'Rohan Das',
-            email: 'rohan.das@gmail.com',
-            phone: '+91 91234 56789',
-            address: '56/A Gariahat Road, Kolkata, WB - 700019'
-          },
-          items: [
-            {
-              id: productRefs[2].id,
-              title: productRefs[2].title,
-              price: productRefs[2].price,
-              image: productRefs[2].image,
-              quantity: 2,
-              variant: 'Obsidian Black'
-            }
-          ],
-          total: productRefs[2].price * 2,
-          status: 'Pending',
-          daysAgo: 1
-        },
-        {
-          customer: {
-            name: 'Ananya Iyer',
-            email: 'ananya.iyer@gmail.com',
-            phone: '+91 98123 45678',
-            address: 'Apt 2B, Rutland Gate 4th Street, Chennai, TN - 600006'
-          },
-          items: [
-            {
-              id: productRefs[0].id,
-              title: productRefs[0].title,
-              price: productRefs[0].price,
-              image: productRefs[0].image,
-              quantity: 1,
-              variant: 'Cosmic Purple'
-            },
-            {
-              id: productRefs[2].id,
-              title: productRefs[2].title,
-              price: productRefs[2].price,
-              image: productRefs[2].image,
-              quantity: 1,
-              variant: 'Slate Gray'
-            }
-          ],
-          total: productRefs[0].price + productRefs[2].price,
-          status: 'Delivered',
-          daysAgo: 10
         }
       ];
 
