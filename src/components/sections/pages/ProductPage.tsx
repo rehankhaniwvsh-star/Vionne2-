@@ -17,6 +17,8 @@ import {
   X as CloseIcon, 
   ChevronLeft as PrevIcon, 
   ChevronRight as NextIcon,
+  ChevronDown,
+  ChevronUp,
   Star,
   CheckCircle2,
   Clock,
@@ -31,7 +33,10 @@ import {
   Check,
   MapPin,
   Camera,
-  MessageSquare
+  MessageSquare,
+  FileText,
+  Info,
+  Layers
 } from 'lucide-react';
 import { adminService } from '../../../services/adminService';
 import { INITIAL_PRODUCTS } from '../../../data/mockProducts';
@@ -54,6 +59,8 @@ export const ProductPage: React.FC = () => {
 
   const [copiedLink, setCopiedLink] = useState(false);
   const [showStickyBar, setShowStickyBar] = useState(false);
+  const [showAllBullets, setShowAllBullets] = useState(false);
+  const [openSidebarAccordion, setOpenSidebarAccordion] = useState<string | null>(null);
 
   // Review Modal State
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -67,6 +74,8 @@ export const ProductPage: React.FC = () => {
   useEffect(() => {
     setActiveImage(0);
     setQuantity(1);
+    setShowAllBullets(false);
+    setOpenSidebarAccordion(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [id]);
 
@@ -111,7 +120,126 @@ export const ProductPage: React.FC = () => {
     if (product.image && !images.includes(product.image)) {
       images.unshift(product.image);
     }
-    return Array.from(new Set(images.filter(img => img)));
+    const filtered = Array.from(new Set(images.filter(img => img)));
+    return filtered.length > 0 ? filtered : [product.image || 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=900'];
+  }, [product]);
+
+  // Keyboard navigation for Lightbox modal
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsLightboxOpen(false);
+      if (e.key === 'ArrowRight') setActiveImage((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
+      if (e.key === 'ArrowLeft') setActiveImage((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLightboxOpen, allImages.length]);
+
+  // Touch Swipe detection for mobile gallery
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+    touchEndX.current = null;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX.current === null || touchEndX.current === null) return;
+    const deltaX = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 45;
+    if (deltaX > minSwipeDistance && allImages.length > 1) {
+      setActiveImage((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
+    } else if (deltaX < -minSwipeDistance && allImages.length > 1) {
+      setActiveImage((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
+    }
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
+
+  const parsedDescription = useMemo(() => {
+    if (!product?.description) return null;
+    const lines = product.description.split('\n').map(l => l.trim()).filter(Boolean);
+    const introLines: string[] = [];
+    const bullets: { title?: string; body: string }[] = [];
+    const extractedSpecs: { label: string; value: string }[] = [];
+
+    let inBullets = false;
+    for (const line of lines) {
+      const isBullet = line.startsWith('•') || line.startsWith('-') || line.startsWith('*') || /^\d+[\.\)]\s/.test(line);
+      if (isBullet) {
+        inBullets = true;
+        const cleanLine = line.replace(/^(?:[•\-*]|\d+[\.\)])\s*/, '').trim();
+
+        // Extract spec-like lines (e.g. "Country of Origin: India", "Material: Glass")
+        const specMatch = cleanLine.match(/^(Country of Origin|Material|Product Dimensions|Dimensions|Net Quantity|Package Contains|Capacity|Power Input|Battery Life|Origin|Weight|Warranty):\s*(.+)$/i);
+        if (specMatch) {
+          extractedSpecs.push({ label: specMatch[1].trim(), value: specMatch[2].trim() });
+        }
+
+        const colonIndex = cleanLine.indexOf(':');
+        if (colonIndex > 0 && colonIndex < 42) {
+          bullets.push({
+            title: cleanLine.substring(0, colonIndex).trim(),
+            body: cleanLine.substring(colonIndex + 1).trim()
+          });
+        } else {
+          bullets.push({ body: cleanLine });
+        }
+      } else if (inBullets) {
+        const colonIndex = line.indexOf(':');
+        if (colonIndex > 0 && colonIndex < 42) {
+          bullets.push({
+            title: line.substring(0, colonIndex).trim(),
+            body: line.substring(colonIndex + 1).trim()
+          });
+        } else {
+          bullets.push({ body: line });
+        }
+      } else {
+        introLines.push(line);
+      }
+    }
+
+    return {
+      intro: introLines.join(' '),
+      bullets,
+      extractedSpecs
+    };
+  }, [product?.description]);
+
+  const displaySpecs = useMemo(() => {
+    if (product?.specs && product.specs.length > 0) {
+      return product.specs;
+    }
+    if (parsedDescription?.extractedSpecs && parsedDescription.extractedSpecs.length > 0) {
+      return parsedDescription.extractedSpecs;
+    }
+    if (!product) return [];
+    return [
+      { label: 'Category', value: product.category || 'Lifestyle' },
+      { label: 'Availability', value: product.inventory && product.inventory > 0 ? `${product.inventory} units available` : 'In Stock • Ready to ship' },
+      { label: 'Quality Check', value: '100% Quality Tested & Approved' },
+      { label: 'Replacement', value: '30-Day Hassle-Free Exchange' }
+    ];
+  }, [product, parsedDescription?.extractedSpecs]);
+
+  const displayBoxItems = useMemo(() => {
+    if (product?.boxItems && product.boxItems.length > 0) {
+      return product.boxItems;
+    }
+    if (!product) return [];
+    return [
+      `1x ${product.title}`,
+      '1x Official Brand Warranty Card',
+      '1x Quick Start Instruction Manual',
+      '1x Quality Inspection Certificate'
+    ];
   }, [product]);
 
   const allReviews = useMemo(() => {
@@ -293,82 +421,139 @@ export const ProductPage: React.FC = () => {
 
         {/* Main Product Hero Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14">
-          {/* Gallery - 7 cols on desktop: Multi-Image 2x2 Showcase matching screenshot */}
+          {/* Gallery - 7 cols on desktop: Unified Modern E-Commerce Gallery with Mobile Swipe & Thumbnails */}
           <div className="lg:col-span-7">
-            {allImages.length >= 4 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {allImages.slice(0, 4).map((img, idx) => (
-                  <div 
-                    key={idx}
-                    onClick={() => {
-                      setActiveImage(idx);
+            <div className="flex flex-col lg:flex-row gap-3.5">
+              {/* Desktop Vertical Thumbnail Column (lg+) */}
+              {allImages.length > 1 && (
+                <div className="hidden lg:flex flex-col gap-2.5 w-20 shrink-0 max-h-[580px] overflow-y-auto no-scrollbar">
+                  {allImages.map((img, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setActiveImage(idx)}
+                      className={`aspect-square w-full rounded-xl overflow-hidden bg-zinc-100 border-2 transition-all cursor-pointer ${
+                        activeImage === idx
+                          ? 'border-zinc-950 ring-2 ring-zinc-950/20 opacity-100 shadow-xs'
+                          : 'border-zinc-200/80 opacity-60 hover:opacity-100 hover:border-zinc-400'
+                      }`}
+                      aria-label={`View photo ${idx + 1}`}
+                    >
+                      <img
+                        src={img}
+                        alt=""
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Main Featured Image Container */}
+              <div className="flex-1 space-y-3 min-w-0">
+                <div
+                  className="relative aspect-square sm:aspect-[4/5] rounded-2xl overflow-hidden bg-zinc-50 border border-zinc-200/80 cursor-zoom-in shadow-2xs group select-none touch-pan-y"
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                  onClick={() => setIsLightboxOpen(true)}
+                >
+                  <img
+                    src={allImages[activeImage] || product.image}
+                    alt={`${product.title} view ${activeImage + 1}`}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-102"
+                  />
+
+                  {/* Real Promotion / Badge pill */}
+                  {(savingsPercent > 0 || product.badge) && (
+                    <div className="absolute top-3 left-3 z-10 pointer-events-none">
+                      <span className="bg-[#28402c] text-white text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md shadow-xs">
+                        {product.badge || `Sale (${savingsPercent}% OFF)`}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Fullscreen Lightbox Zoom Trigger */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setIsLightboxOpen(true);
                     }}
-                    className="group relative aspect-square rounded-xl overflow-hidden bg-zinc-50 border border-zinc-200/70 cursor-zoom-in shadow-2xs hover:border-zinc-400 transition-all duration-300"
+                    className="absolute top-3 right-3 p-2 bg-white/85 hover:bg-white backdrop-blur-xs rounded-full text-zinc-700 hover:text-black shadow-xs transition-colors z-10"
+                    title="Zoom photo full-screen"
+                    aria-label="Zoom photo"
                   >
-                    <img 
-                      src={img} 
-                      alt={`${product.title} ${idx + 1}`}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                    />
+                    <Maximize2 size={15} />
+                  </button>
 
-                    {/* Image Caption / Function Tags matching screenshot */}
-                    {idx === 0 && (
-                      <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] uppercase font-medium tracking-wider text-zinc-800 px-2.5 py-1 rounded shadow-xs">
-                        Dual Mode Pour & Spray
-                      </div>
-                    )}
-                    {idx === 1 && (
-                      <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] uppercase font-medium tracking-wider text-zinc-800 px-2.5 py-1 rounded shadow-xs">
-                        Easy To Use 4-Step Guide
-                      </div>
-                    )}
-                    {idx === 2 && (
-                      <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] uppercase font-medium tracking-wider text-zinc-800 px-2.5 py-1 rounded shadow-xs">
-                        Leak-Proof Gasket Structure
-                      </div>
-                    )}
-                    {idx === 3 && (
-                      <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] uppercase font-medium tracking-wider text-zinc-800 px-2.5 py-1 rounded shadow-xs">
-                        Healthy Oil Measuring
-                      </div>
-                    )}
-
-                    <div className="absolute bottom-3 right-3 p-2 bg-white/80 backdrop-blur-xs rounded-full text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Maximize2 size={14} />
+                  {/* Image Counter Pill */}
+                  {allImages.length > 1 && (
+                    <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-xs text-white text-[11px] font-medium px-2.5 py-1 rounded-full shadow-xs pointer-events-none z-10 flex items-center gap-1">
+                      <span>{activeImage + 1}</span>
+                      <span className="opacity-50">/</span>
+                      <span className="opacity-80">{allImages.length}</span>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col-reverse md:flex-row gap-4">
-                {allImages.length > 1 && (
-                  <div className="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto no-scrollbar md:w-20 shrink-0">
-                    {allImages.map((img, idx) => (
-                      <button 
-                        key={idx}
-                        onClick={() => setActiveImage(idx)}
-                        className={`aspect-square w-16 md:w-full rounded-xl overflow-hidden bg-zinc-100 border transition-all duration-200 ${
-                          activeImage === idx ? 'border-black ring-1 ring-black' : 'border-transparent opacity-60 hover:opacity-100'
-                        }`}
+                  )}
+
+                  {/* Quick Previous / Next Navigation Arrows */}
+                  {allImages.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveImage((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
+                        }}
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 p-2 bg-white/85 hover:bg-white backdrop-blur-xs rounded-full text-zinc-800 shadow-sm transition-all opacity-80 hover:opacity-100 z-10"
+                        aria-label="Previous image"
                       >
-                        <img src={img} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                        <PrevIcon size={18} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveImage((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-2 bg-white/85 hover:bg-white backdrop-blur-xs rounded-full text-zinc-800 shadow-sm transition-all opacity-80 hover:opacity-100 z-10"
+                        aria-label="Next image"
+                      >
+                        <NextIcon size={18} />
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Mobile / Tablet Horizontal Thumbnails Strip (< lg) */}
+                {allImages.length > 1 && (
+                  <div className="flex lg:hidden items-center gap-2.5 overflow-x-auto no-scrollbar py-1 px-0.5">
+                    {allImages.map((img, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setActiveImage(idx)}
+                        className={`relative w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${
+                          activeImage === idx
+                            ? 'border-zinc-950 ring-2 ring-zinc-950/20 opacity-100 scale-102 shadow-xs'
+                            : 'border-zinc-200/80 opacity-60 hover:opacity-100 hover:border-zinc-400'
+                        }`}
+                        aria-label={`Thumbnail ${idx + 1}`}
+                      >
+                        <img
+                          src={img}
+                          alt=""
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover"
+                        />
                       </button>
                     ))}
                   </div>
                 )}
-                <div 
-                  className="flex-1 relative aspect-square sm:aspect-[4/5] rounded-xl overflow-hidden bg-zinc-50 border border-zinc-200/80 cursor-zoom-in"
-                  onClick={() => setIsLightboxOpen(true)}
-                >
-                  <img src={allImages[activeImage]} alt={product.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                  <div className="absolute top-3 right-3 p-2 bg-white/80 backdrop-blur-xs rounded-full text-zinc-700">
-                    <Maximize2 size={14} />
-                  </div>
-                </div>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Product Details & Actions - 5 cols on desktop */}
@@ -470,28 +655,158 @@ export const ProductPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Product Description matching the screenshot */}
-            <div className="space-y-4 pt-4 border-t border-zinc-100 text-xs text-zinc-700 leading-relaxed font-light">
-              <p>
-                One glass bottle that pours and sprays — measure roughly 0.15g of oil per spritz for lighter cooking, or tip it to pour for baking and dressings. No more clutter of two separate bottles.
-              </p>
+            {/* Enhanced Dynamic Product Description View */}
+            <div className="space-y-4 pt-4 border-t border-zinc-100 text-xs text-zinc-700 leading-relaxed">
+              {/* Overview Callout Card */}
+              {(product.shortDescription || parsedDescription?.intro) && (
+                <div className="bg-[#fcfbf9] border border-stone-200/80 rounded-xl p-3.5 space-y-1.5 shadow-2xs">
+                  <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#28402c]">
+                    <Sparkles size={13} className="text-[#28402c]" />
+                    <span>Product Overview</span>
+                  </div>
+                  <p className="text-xs text-zinc-700 leading-relaxed font-normal">
+                    {product.shortDescription || parsedDescription?.intro}
+                  </p>
+                </div>
+              )}
 
-              <ul className="space-y-1.5 list-disc pl-4 text-zinc-600">
-                <li>2-in-1: switch between a fine spray and a controlled pour</li>
-                <li>Each spray measures ~0.15g of oil — easy to track for healthy cooking</li>
-                <li>Leak-proof cap keeps your counter and cabinet clean</li>
-                <li>Food-grade, BPA-free, lead-free glass — see your oil level at a glance</li>
-                <li>Comes with a silicone basting brush and spatula</li>
-              </ul>
+              {/* Enhanced Key Highlights Bullets with Bold Headers and Custom Badges */}
+              {parsedDescription && parsedDescription.bullets.length > 0 && (
+                <div className="space-y-2.5 pt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                      Key Highlights
+                    </span>
+                    <span className="text-[10px] text-zinc-400 font-medium">
+                      {parsedDescription.bullets.length} Features
+                    </span>
+                  </div>
 
-              {/* Specifications Block */}
-              <div className="pt-2">
-                <p className="font-medium text-zinc-900 mb-1.5">Specifications</p>
-                <div className="space-y-1 text-zinc-600 pl-1">
-                  <p><span className="text-zinc-500">Material:</span> Glass, BPA-free</p>
-                  <p><span className="text-zinc-500">Capacity:</span> 470 ml</p>
-                  <p><span className="text-zinc-500">Dimensions:</span> 10 × 10 × 10 cm</p>
-                  <p><span className="text-zinc-500">Origin:</span> India</p>
+                  <div className="space-y-2">
+                    {(showAllBullets ? parsedDescription.bullets : parsedDescription.bullets.slice(0, 3)).map((bullet, idx) => (
+                      <div key={idx} className="flex items-start gap-2.5 text-xs text-zinc-700 leading-relaxed group">
+                        <span className="mt-0.5 w-4 h-4 rounded-full bg-emerald-50 text-[#28402c] flex items-center justify-center shrink-0 border border-emerald-200/70">
+                          <Check size={10} className="stroke-[3]" />
+                        </span>
+                        <div className="flex-1">
+                          {bullet.title && (
+                            <strong className="font-semibold text-zinc-900">{bullet.title}: </strong>
+                          )}
+                          <span className="text-zinc-600 font-normal">{bullet.body}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {parsedDescription.bullets.length > 3 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllBullets(!showAllBullets)}
+                      className="text-xs font-semibold text-[#28402c] hover:text-[#1e3021] flex items-center gap-1.5 pt-1 transition-colors cursor-pointer"
+                    >
+                      <span>
+                        {showAllBullets ? 'Show fewer highlights' : `+ View ${parsedDescription.bullets.length - 3} more highlights`}
+                      </span>
+                      {showAllBullets ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Fallback for raw description if neither intro nor bullets parsed */}
+              {!parsedDescription?.intro && !parsedDescription?.bullets?.length && product.description && (
+                <p className="text-zinc-700 leading-relaxed whitespace-pre-line text-xs">
+                  {product.description}
+                </p>
+              )}
+
+              {/* Clean Expandable Accordions for Deep Details */}
+              <div className="pt-2 divide-y divide-zinc-200/80 border-t border-b border-zinc-200/80">
+                {/* 1. Tech Specs */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setOpenSidebarAccordion(openSidebarAccordion === 'specs' ? null : 'specs')}
+                    className="w-full py-3 flex items-center justify-between text-xs font-semibold text-zinc-800 hover:text-black transition-colors text-left cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Sliders size={13} className="text-zinc-500" />
+                      Specifications & Dimensions
+                    </span>
+                    <ChevronDown size={14} className={`text-zinc-400 transition-transform duration-200 ${openSidebarAccordion === 'specs' ? 'rotate-180 text-zinc-800' : ''}`} />
+                  </button>
+                  {openSidebarAccordion === 'specs' && (
+                    <div className="pb-3 text-xs">
+                      <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-200/70 divide-y divide-zinc-200/60">
+                        {displaySpecs.map((spec, idx) => (
+                          <div key={idx} className="flex justify-between items-center py-1.5 text-[11px] first:pt-0 last:pb-0">
+                            <span className="text-zinc-500 font-medium">{spec.label}</span>
+                            <span className="text-zinc-900 font-semibold text-right max-w-[60%]">{spec.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. What's in the Box */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setOpenSidebarAccordion(openSidebarAccordion === 'box' ? null : 'box')}
+                    className="w-full py-3 flex items-center justify-between text-xs font-semibold text-zinc-800 hover:text-black transition-colors text-left cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Package size={13} className="text-zinc-500" />
+                      What's in the Box ({displayBoxItems.length} items)
+                    </span>
+                    <ChevronDown size={14} className={`text-zinc-400 transition-transform duration-200 ${openSidebarAccordion === 'box' ? 'rotate-180 text-zinc-800' : ''}`} />
+                  </button>
+                  {openSidebarAccordion === 'box' && (
+                    <div className="pb-3 text-xs">
+                      <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-200/70 space-y-2">
+                        {displayBoxItems.map((item, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-[11px] text-zinc-700">
+                            <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                            <span className="font-medium">{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Shipping, Returns & Authenticity */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setOpenSidebarAccordion(openSidebarAccordion === 'guarantee' ? null : 'guarantee')}
+                    className="w-full py-3 flex items-center justify-between text-xs font-semibold text-zinc-800 hover:text-black transition-colors text-left cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <ShieldCheck size={13} className="text-zinc-500" />
+                      Shipping, COD & Returns Policy
+                    </span>
+                    <ChevronDown size={14} className={`text-zinc-400 transition-transform duration-200 ${openSidebarAccordion === 'guarantee' ? 'rotate-180 text-zinc-800' : ''}`} />
+                  </button>
+                  {openSidebarAccordion === 'guarantee' && (
+                    <div className="pb-3 text-[11px] text-zinc-600">
+                      <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-200/70 space-y-2">
+                        <div className="flex items-start gap-2">
+                          <Truck size={13} className="text-[#28402c] shrink-0 mt-0.5" />
+                          <span><strong>Free Express Shipping:</strong> Dispatches within 24 hours with SMS and WhatsApp tracking.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <RotateCcw size={13} className="text-[#28402c] shrink-0 mt-0.5" />
+                          <span><strong>30-Day Hassle-Free Returns:</strong> Instant replacement or 100% refund with doorstep pickup.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <CheckCircle2 size={13} className="text-[#28402c] shrink-0 mt-0.5" />
+                          <span><strong>Verified Quality:</strong> 100% genuine product inspected before leaving the facility.</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -647,59 +962,140 @@ export const ProductPage: React.FC = () => {
 
           {/* Tab 1: Features & Benefits */}
           {activeTab === 'features' && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-              <div className="max-w-3xl prose text-zinc-700 leading-relaxed">
-                <p className="text-base font-normal">{product.description}</p>
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-10">
+              {/* Editorial Intro Banner */}
+              <div className="bg-[#fcfaf7] rounded-2xl p-6 md:p-8 border border-stone-200/80 space-y-3">
+                {product.tagline && (
+                  <p className="text-base md:text-lg font-serif italic text-zinc-900 leading-snug">
+                    "{product.tagline}"
+                  </p>
+                )}
+                {product.shortDescription && (
+                  <p className="text-sm md:text-base text-zinc-700 leading-relaxed font-normal">
+                    {product.shortDescription}
+                  </p>
+                )}
+                {parsedDescription?.intro && !product.shortDescription && (
+                  <p className="text-sm md:text-base text-zinc-700 leading-relaxed font-normal">
+                    {parsedDescription.intro}
+                  </p>
+                )}
               </div>
 
-              {product.features && product.features.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-                  {product.features.map((feat, idx) => (
-                    <div key={idx} className="p-6 bg-zinc-50 rounded-2xl border border-zinc-200/80 space-y-2">
-                      <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold text-sm">
-                        0{idx + 1}
+              {/* Visual Feature Cards Grid */}
+              {((product.features && product.features.length > 0) || (parsedDescription?.bullets && parsedDescription.bullets.some(b => b.title))) && (
+                <div className="space-y-4">
+                  <h4 className="text-base font-bold text-zinc-900 flex items-center gap-2">
+                    <Sparkles size={16} className="text-[#28402c]" />
+                    Engineered Features & Capabilities
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {((product.features && product.features.length > 0) 
+                      ? product.features 
+                      : (parsedDescription?.bullets.filter(b => b.title).slice(0, 4).map(b => ({ title: b.title!, desc: b.body })) || [])
+                    ).map((feat, idx) => (
+                      <div key={idx} className="p-6 bg-zinc-50 rounded-2xl border border-zinc-200/80 space-y-2 hover:border-zinc-300 transition-colors">
+                        <div className="w-8 h-8 rounded-lg bg-[#28402c] text-white flex items-center justify-center font-bold text-xs">
+                          0{idx + 1}
+                        </div>
+                        <h5 className="text-sm md:text-base font-bold text-zinc-950 pt-1">{feat.title}</h5>
+                        <p className="text-xs md:text-sm text-zinc-600 leading-relaxed">{feat.desc}</p>
                       </div>
-                      <h4 className="text-base font-bold text-zinc-950 pt-1">{feat.title}</h4>
-                      <p className="text-sm text-zinc-600 leading-relaxed">{feat.desc}</p>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
+
+              {/* Complete Highlights Checklist */}
+              {parsedDescription?.bullets && parsedDescription.bullets.length > 0 && (
+                <div className="space-y-4 pt-2">
+                  <h4 className="text-base font-bold text-zinc-900 flex items-center gap-2">
+                    <CheckCircle2 size={16} className="text-emerald-700" />
+                    Complete Product Details & Highlights
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    {parsedDescription.bullets.map((bullet, idx) => (
+                      <div key={idx} className="flex items-start gap-3 p-4 bg-white rounded-xl border border-zinc-200/80 shadow-2xs">
+                        <div className="w-5 h-5 rounded-full bg-emerald-50 text-[#28402c] flex items-center justify-center shrink-0 border border-emerald-200/70 mt-0.5">
+                          <Check size={11} className="stroke-[3]" />
+                        </div>
+                        <div className="text-xs leading-relaxed">
+                          {bullet.title && (
+                            <strong className="font-semibold text-zinc-900 block mb-0.5">{bullet.title}</strong>
+                          )}
+                          <span className="text-zinc-600">{bullet.body}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Fallback if no bullets: raw description */}
+              {(!parsedDescription?.bullets || parsedDescription.bullets.length === 0) && product.description && (
+                <div className="p-6 bg-zinc-50 rounded-2xl border border-zinc-200/80 text-sm text-zinc-700 leading-relaxed whitespace-pre-line">
+                  {product.description}
+                </div>
+              )}
+
+              {/* Quality & Assurance Ribbon */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200/80 flex items-center gap-3">
+                  <ShieldCheck size={20} className="text-[#28402c] shrink-0" />
+                  <div className="text-xs">
+                    <p className="font-bold text-zinc-900">100% Quality Tested</p>
+                    <p className="text-zinc-500 text-[11px]">Strict multi-point inspection</p>
+                  </div>
+                </div>
+                <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200/80 flex items-center gap-3">
+                  <Package size={20} className="text-[#28402c] shrink-0" />
+                  <div className="text-xs">
+                    <p className="font-bold text-zinc-900">Tamper-Proof Box</p>
+                    <p className="text-zinc-500 text-[11px]">Sealed retail packaging</p>
+                  </div>
+                </div>
+                <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200/80 flex items-center gap-3">
+                  <RotateCcw size={20} className="text-[#28402c] shrink-0" />
+                  <div className="text-xs">
+                    <p className="font-bold text-zinc-900">30-Day Protection</p>
+                    <p className="text-zinc-500 text-[11px]">Doorstep pickup & replace</p>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           )}
 
           {/* Tab 2: Specifications Table */}
           {activeTab === 'specs' && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl">
-              <div className="border border-zinc-200 rounded-2xl overflow-hidden divide-y divide-zinc-200">
-                {(product.specs && product.specs.length > 0 ? product.specs : [
-                  { label: 'Category', value: product.category },
-                  { label: 'Status', value: product.status || 'Active' },
-                  { label: 'Standard Warranty', value: '1 Year Full Replacement' },
-                  { label: 'Origin', value: 'Crafted & Tested with Premium Standards' }
-                ]).map((spec, idx) => (
-                  <div key={idx} className="grid grid-cols-3 p-4 bg-white hover:bg-zinc-50 transition-colors text-xs">
-                    <span className="font-extrabold uppercase text-zinc-500">{spec.label}</span>
-                    <span className="col-span-2 font-medium text-zinc-900">{spec.value}</span>
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl space-y-6">
+              <div className="border border-zinc-200 rounded-2xl overflow-hidden divide-y divide-zinc-200 shadow-2xs">
+                {displaySpecs.map((spec, idx) => (
+                  <div key={idx} className="grid grid-cols-3 p-4 bg-white hover:bg-zinc-50/80 transition-colors text-xs">
+                    <span className="font-bold uppercase text-zinc-500 text-[11px] tracking-wider">{spec.label}</span>
+                    <span className="col-span-2 font-medium text-zinc-900 leading-relaxed">{spec.value}</span>
                   </div>
                 ))}
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-zinc-500 px-1 font-light">
+                <Info size={14} className="text-zinc-400 shrink-0" />
+                <span>All technical measurements, capacities, and materials are verified by quality assurance guidelines.</span>
               </div>
             </motion.div>
           )}
 
           {/* Tab 3: What's in the Box */}
           {activeTab === 'box' && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl space-y-4">
-              <p className="text-sm text-zinc-600 mb-4">Every order is sealed in original premium retail packaging with quality assurance certification:</p>
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl space-y-5">
+              <p className="text-sm text-zinc-600 font-light">
+                Every order is packaged with shock-absorbent cushioning and sealed in original premium retail packaging:
+              </p>
               <div className="space-y-3">
-                {(product.boxItems && product.boxItems.length > 0 ? product.boxItems : [
-                  `1x ${product.title}`,
-                  '1x Official Certificate of Authenticity',
-                  '1x Quick Start Guide & Instructions Manual',
-                  '1x Warranty Card & VIP Support Code'
-                ]).map((item, idx) => (
-                  <div key={idx} className="flex items-center space-x-3 p-3.5 bg-zinc-50 rounded-xl border border-zinc-200 text-sm font-semibold text-zinc-900">
-                    <CheckCircle2 size={18} className="text-emerald-600 flex-shrink-0" />
+                {displayBoxItems.map((item, idx) => (
+                  <div key={idx} className="flex items-center space-x-3 p-4 bg-white rounded-xl border border-zinc-200/80 shadow-2xs text-xs sm:text-sm font-semibold text-zinc-900">
+                    <div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200/70">
+                      <CheckCircle2 size={15} />
+                    </div>
                     <span>{item}</span>
                   </div>
                 ))}
