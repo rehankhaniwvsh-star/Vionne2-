@@ -338,18 +338,30 @@ export const adminService = {
       const orderRef = await addDoc(collection(db, 'orders'), orderData);
 
       // Also add/update customer for analytics using setDoc with merge to avoid read permissions issues for guests
-      const customerEmail = order.customer.email.toLowerCase();
-      const customerDocRef = doc(db, 'customers', customerEmail);
-      
-      await setDoc(customerDocRef, {
-        name: order.customer.name,
-        email: customerEmail,
-        phone: order.customer.phone,
-        address: order.customer.address,
-        totalSpent: increment(order.total),
-        ordersCount: increment(1),
-        lastOrder: Timestamp.now()
-      }, { merge: true });
+      try {
+        const rawEmail = order.customer?.email ? String(order.customer.email).toLowerCase().trim() : '';
+        const rawPhone = order.customer?.phone ? String(order.customer.phone).replace(/\D/g, '') : '';
+        const customerIdentifier = rawEmail || (rawPhone ? `phone_${rawPhone}` : null);
+
+        if (customerIdentifier && customerIdentifier.trim().length > 0) {
+          // Document ID in Firestore cannot contain forward slashes
+          const safeDocId = customerIdentifier.replace(/\//g, '_').trim();
+          if (safeDocId.length > 0) {
+            const customerDocRef = doc(db, 'customers', safeDocId);
+            await setDoc(customerDocRef, {
+              name: order.customer?.name || 'Customer',
+              email: rawEmail,
+              phone: rawPhone,
+              address: order.customer?.address || '',
+              totalSpent: increment(order.total),
+              ordersCount: increment(1),
+              lastOrder: Timestamp.now()
+            }, { merge: true });
+          }
+        }
+      } catch (customerErr) {
+        console.warn('Customer analytics record skipped or deferred:', customerErr);
+      }
 
       // Send notifications
       notificationService.notifyOrderStatusUpdate({ id: orderRef.id, ...orderData });
@@ -440,7 +452,7 @@ export const adminService = {
   updateSettings: async (settings: any) => {
     try {
       const docRef = doc(db, 'settings', 'store');
-      return await updateDoc(docRef, settings);
+      return await setDoc(docRef, settings, { merge: true });
     } catch (error) {
       handleFirestoreError(error, 'update', 'settings/store');
     }
@@ -590,17 +602,19 @@ export const adminService = {
         await addDoc(collection(db, 'orders'), orderData);
 
         // Seed Customer stats
-        const customerEmail = sample.customer.email.toLowerCase();
-        const customerDocRef = doc(db, 'customers', customerEmail);
-        await setDoc(customerDocRef, {
-          name: sample.customer.name,
-          email: customerEmail,
-          phone: sample.customer.phone,
-          address: sample.customer.address,
-          totalSpent: increment(sample.total),
-          ordersCount: increment(1),
-          lastOrder: Timestamp.fromDate(date)
-        }, { merge: true });
+        const customerEmail = sample.customer?.email?.toLowerCase()?.trim();
+        if (customerEmail) {
+          const customerDocRef = doc(db, 'customers', customerEmail.replace(/\//g, '_'));
+          await setDoc(customerDocRef, {
+            name: sample.customer.name,
+            email: customerEmail,
+            phone: sample.customer.phone,
+            address: sample.customer.address,
+            totalSpent: increment(sample.total),
+            ordersCount: increment(1),
+            lastOrder: Timestamp.fromDate(date)
+          }, { merge: true });
+        }
       }
 
       console.log('Store re-creation completed successfully!');

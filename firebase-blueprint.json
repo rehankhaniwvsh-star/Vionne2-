@@ -44,7 +44,16 @@
         },
         "total": { "type": "number" },
         "status": { "type": "string", "enum": ["Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"] },
-        "paymentMethod": { "type": "string", "enum": ["COD", "Credit Card"] },
+        "paymentMethod": { "type": "string", "description": "Payment method used (e.g., UPI, UPI QR, COD, Card)." },
+        "upiDetails": {
+          "type": "object",
+          "properties": {
+            "vpa": { "type": "string" },
+            "utr": { "type": "string" },
+            "app": { "type": "string" },
+            "status": { "type": "string" }
+          }
+        },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["customer", "items", "total", "status", "paymentMethod"]
@@ -81,7 +90,13 @@
           "type": "object",
           "properties": {
             "codEnabled": { "type": "boolean" },
-            "stripeEnabled": { "type": "boolean" }
+            "stripeEnabled": { "type": "boolean" },
+            "upiEnabled": { "type": "boolean" },
+            "merchantUpiId": { "type": "string" },
+            "merchantName": { "type": "string" },
+            "mcc": { "type": "string" },
+            "prepaidDiscountEnabled": { "type": "boolean" },
+            "prepaidDiscountPercent": { "type": "number" }
           }
         },
         "notifications": {

@@ -138,6 +138,7 @@ export function OrdersPage() {
                 <TableHead className="py-4 text-[10px] font-black uppercase tracking-widest opacity-60">ID</TableHead>
                 <TableHead className="py-4 text-[10px] font-black uppercase tracking-widest opacity-60">Customer</TableHead>
                 <TableHead className="py-4 text-[10px] font-black uppercase tracking-widest opacity-60">Status</TableHead>
+                <TableHead className="py-4 text-[10px] font-black uppercase tracking-widest opacity-60">Payment</TableHead>
                 <TableHead className="py-4 text-[10px] font-black uppercase tracking-widest opacity-60 text-right">Total</TableHead>
                 <TableHead className="w-[80px] py-4"></TableHead>
               </TableRow>
@@ -145,7 +146,7 @@ export function OrdersPage() {
             <TableBody>
               {filteredOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-20 text-muted-foreground text-xs font-bold uppercase tracking-widest">
+                  <TableCell colSpan={6} className="text-center py-20 text-muted-foreground text-xs font-bold uppercase tracking-widest">
                     No orders found
                   </TableCell>
                 </TableRow>
@@ -162,6 +163,14 @@ export function OrdersPage() {
                   </TableCell>
                   <TableCell className="py-4">
                     {getStatusBadge(order.status)}
+                  </TableCell>
+                  <TableCell className="py-4">
+                    <div className="text-xs font-bold">{order.paymentMethod || 'Online'}</div>
+                    {order.upiDetails?.utr && (
+                      <div className="font-mono text-[10px] text-emerald-600 font-semibold mt-0.5">
+                        UTR: {order.upiDetails.utr}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="py-4 text-right">
                     <div className="text-sm font-black tracking-tight italic">₹{Number(order.total).toLocaleString('en-IN')}</div>
