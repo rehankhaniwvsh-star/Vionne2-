@@ -15,7 +15,7 @@ export interface UpiConfig {
 
 export const DEFAULT_UPI_CONFIG: UpiConfig = {
   merchantUpiId: 'rkhan171302@oksbi',
-  merchantName: 'rehan khan',
+  merchantName: 'Vionne',
   mcc: '5499',
   prepaidDiscountPercent: 5,
   prepaidDiscountEnabled: true,

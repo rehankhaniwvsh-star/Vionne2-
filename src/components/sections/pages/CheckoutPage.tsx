@@ -2,13 +2,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useCart } from '../../../store/useCart';
 import { 
   Lock, 
-  CreditCard, 
   Truck, 
   CheckCircle2, 
   ArrowLeft, 
   ShieldCheck, 
   QrCode, 
-  Building2, 
   Tag, 
   Copy, 
   Check, 
@@ -65,7 +63,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
   const { items, total: cartTotal, clearCart } = useCart();
 
   // Payment method selection
-  const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'CARD' | 'NETBANKING' | 'COD'>('UPI');
+  const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'COD'>('UPI');
   
   // Coupon engine
   const [couponCode, setCouponCode] = useState('');
@@ -85,11 +83,6 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
     pincode: '',
     country: 'India',
     saveInfo: true,
-    cardNumber: '',
-    cardName: '',
-    cardExpiry: '',
-    cardCvv: '',
-    selectedBank: 'HDFC',
     utrNumber: '',
   });
 
@@ -185,11 +178,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
     setIsSubmitting(true);
 
     const paymentLabel = paymentMethod === 'UPI'
-      ? 'UPI (Google Pay / QR - rehan khan)'
-      : paymentMethod === 'CARD'
-      ? 'Credit/Debit Card'
-      : paymentMethod === 'NETBANKING'
-      ? `Net Banking (${formData.selectedBank})`
+      ? 'UPI (Google Pay / QR - Vionne)'
       : 'Cash on Delivery (COD)';
 
     try {
@@ -220,7 +209,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
         ...(paymentMethod === 'UPI' ? {
           upiDetails: {
             merchantUpiId: 'rkhan171302@oksbi',
-            merchantName: 'rehan khan',
+            merchantName: 'Vionne',
             utr: formData.utrNumber.trim() || `UPI${Math.floor(100000000000 + Math.random() * 900000000000)}`,
             status: 'PAID'
           }
@@ -729,114 +718,6 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
                         utrValue={formData.utrNumber}
                         onUtrChange={(val) => setFormData({ ...formData, utrNumber: val })}
                       />
-                    </div>
-                  )}
-                </div>
-
-                {/* Credit / Debit Card Option */}
-                <div 
-                  onClick={() => setPaymentMethod('CARD')}
-                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
-                    paymentMethod === 'CARD' 
-                      ? 'border-zinc-900 bg-zinc-50/40' 
-                      : 'border-zinc-200 hover:border-zinc-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        paymentMethod === 'CARD' ? 'border-zinc-900' : 'border-zinc-300'
-                      }`}>
-                        {paymentMethod === 'CARD' && <div className="w-2 h-2 rounded-full bg-zinc-900" />}
-                      </div>
-                      <div>
-                        <span className="text-xs font-bold text-zinc-900">Credit or Debit Card</span>
-                        <p className="text-[11px] text-zinc-500">Visa, Mastercard, RuPay, Maestro</p>
-                      </div>
-                    </div>
-                    <CreditCard size={18} className="text-zinc-600" />
-                  </div>
-
-                  {paymentMethod === 'CARD' && (
-                    <div className="mt-4 pt-4 border-t border-zinc-200 space-y-3">
-                      <div className="space-y-1">
-                        <label className="block text-[11px] font-medium text-zinc-700">Card Number</label>
-                        <input
-                          type="text"
-                          maxLength={19}
-                          value={formData.cardNumber}
-                          onChange={e => setFormData({ ...formData, cardNumber: e.target.value.replace(/\D/g, '').replace(/(\d{4})/g, '$1 ').trim() })}
-                          placeholder="4532 •••• •••• 8920"
-                          className="w-full px-3.5 py-2.5 text-xs border border-zinc-300 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-zinc-900"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="block text-[11px] font-medium text-zinc-700">Expiry Date</label>
-                          <input
-                            type="text"
-                            maxLength={5}
-                            value={formData.cardExpiry}
-                            onChange={e => setFormData({ ...formData, cardExpiry: e.target.value })}
-                            placeholder="MM/YY"
-                            className="w-full px-3.5 py-2.5 text-xs border border-zinc-300 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-zinc-900"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="block text-[11px] font-medium text-zinc-700">CVV / CVC</label>
-                          <input
-                            type="password"
-                            maxLength={4}
-                            value={formData.cardCvv}
-                            onChange={e => setFormData({ ...formData, cardCvv: e.target.value.replace(/\D/g, '') })}
-                            placeholder="•••"
-                            className="w-full px-3.5 py-2.5 text-xs border border-zinc-300 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-zinc-900"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Net Banking Option */}
-                <div 
-                  onClick={() => setPaymentMethod('NETBANKING')}
-                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
-                    paymentMethod === 'NETBANKING' 
-                      ? 'border-zinc-900 bg-zinc-50/40' 
-                      : 'border-zinc-200 hover:border-zinc-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        paymentMethod === 'NETBANKING' ? 'border-zinc-900' : 'border-zinc-300'
-                      }`}>
-                        {paymentMethod === 'NETBANKING' && <div className="w-2 h-2 rounded-full bg-zinc-900" />}
-                      </div>
-                      <div>
-                        <span className="text-xs font-bold text-zinc-900">Net Banking</span>
-                        <p className="text-[11px] text-zinc-500">All major Indian banks supported</p>
-                      </div>
-                    </div>
-                    <Building2 size={18} className="text-zinc-600" />
-                  </div>
-
-                  {paymentMethod === 'NETBANKING' && (
-                    <div className="mt-4 pt-4 border-t border-zinc-200 space-y-3">
-                      <label className="block text-[11px] font-medium text-zinc-700">Select Your Bank</label>
-                      <select
-                        value={formData.selectedBank}
-                        onChange={e => setFormData({ ...formData, selectedBank: e.target.value })}
-                        className="w-full px-3.5 py-2.5 text-xs border border-zinc-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900"
-                      >
-                        <option value="HDFC">HDFC Bank</option>
-                        <option value="SBI">State Bank of India (SBI)</option>
-                        <option value="ICICI">ICICI Bank</option>
-                        <option value="AXIS">Axis Bank</option>
-                        <option value="KOTAK">Kotak Mahindra Bank</option>
-                        <option value="PNB">Punjab National Bank</option>
-                      </select>
                     </div>
                   )}
                 </div>

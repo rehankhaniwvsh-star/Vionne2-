@@ -1,6 +1,6 @@
 {
   "name": "Vionne — High-Conversion E-Commerce & Checkout",
-  "description": "High-conversion product storefront and bold, comprehensive checkout experience with Online Payment Gateway (UPI, Cards, NetBanking, Wallets) and Cash on Delivery (COD) workflows.",
+  "description": "High-conversion product storefront and streamlined checkout experience with direct UPI QR code and Cash on Delivery (COD) workflows.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

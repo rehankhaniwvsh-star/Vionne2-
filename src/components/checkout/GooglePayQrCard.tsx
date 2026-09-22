@@ -17,7 +17,7 @@ export const GooglePayQrCard: React.FC<GooglePayQrCardProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const upiId = 'rkhan171302@oksbi';
-  const payeeName = 'rehan khan';
+  const payeeName = 'Vionne';
 
   // Build standard UPI URL
   const upiUrl = amount && amount > 0
@@ -47,15 +47,16 @@ export const GooglePayQrCard: React.FC<GooglePayQrCardProps> = ({
 
   return (
     <div className="w-full max-w-md mx-auto bg-[#F0F4F9] border border-zinc-200/80 rounded-3xl p-6 sm:p-7 shadow-sm text-zinc-800 font-sans">
-      {/* Payee Profile Header matching the user's uploaded Google Pay QR */}
+      {/* Payee Store Profile Header */}
       <div className="flex items-center justify-center space-x-3 mb-6">
-        <div className="w-11 h-11 rounded-full bg-[#EA580C] text-white font-semibold flex items-center justify-center text-xl shadow-sm">
-          r
+        <div className="w-11 h-11 rounded-full bg-zinc-900 text-white font-serif font-bold flex items-center justify-center text-xl shadow-sm tracking-tight">
+          V
         </div>
         <div className="text-left">
-          <h3 className="text-xl sm:text-2xl font-normal text-zinc-900 tracking-tight lowercase">
-            {payeeName}
+          <h3 className="text-xl sm:text-2xl font-serif font-semibold text-zinc-900 tracking-tight">
+            VIONNE
           </h3>
+          <p className="text-[11px] text-zinc-500 font-medium">Official Store Payment</p>
         </div>
       </div>
 
