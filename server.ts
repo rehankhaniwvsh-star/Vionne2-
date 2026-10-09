@@ -32,9 +32,17 @@ async function startServer() {
     return twilio(accountSid, authToken);
   };
 
+  const RAZORPAY_DEFAULT_KEY_ID = "rzp_live_TlizK7xD4lJ68X";
+  const RAZORPAY_DEFAULT_KEY_SECRET = "fBf2ttVuwwLs704tTksjy5DX";
+
+  const getActiveRazorpayConfig = () => {
+    const keyId = (process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || RAZORPAY_DEFAULT_KEY_ID).trim();
+    const keySecret = (process.env.RAZORPAY_KEY_SECRET || RAZORPAY_DEFAULT_KEY_SECRET).trim();
+    return { keyId, keySecret };
+  };
+
   const getRazorpayInstance = () => {
-    const keyId = process.env.RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    const { keyId, keySecret } = getActiveRazorpayConfig();
     if (!keyId || !keySecret) return null;
     return new Razorpay({
       key_id: keyId,
@@ -44,16 +52,18 @@ async function startServer() {
 
   // API routes
   app.get("/api/health", (req, res) => {
+    const { keyId, keySecret } = getActiveRazorpayConfig();
     res.json({ 
       status: "ok", 
       message: "Vionne Admin API with Razorpay is running",
-      razorpayConfigured: Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET)
+      razorpayConfigured: Boolean(keyId && keySecret)
     });
   });
 
   app.get("/api/razorpay-config", (req, res) => {
+    const { keyId } = getActiveRazorpayConfig();
     res.json({
-      key_id: process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || "rzp_live_TlizK7xD4lJ68X",
+      key_id: keyId,
     });
   });
 
@@ -76,8 +86,7 @@ async function startServer() {
         });
       }
 
-      const keyId = process.env.RAZORPAY_KEY_ID;
-      const keySecret = process.env.RAZORPAY_KEY_SECRET;
+      const { keyId, keySecret } = getActiveRazorpayConfig();
 
       if (!keyId || !keySecret) {
         return res.status(401).json({ 
@@ -145,7 +154,7 @@ async function startServer() {
         });
       }
 
-      const keySecret = process.env.RAZORPAY_KEY_SECRET;
+      const { keySecret } = getActiveRazorpayConfig();
       if (!keySecret) {
         return res.status(500).json({
           error: "Server configuration error: RAZORPAY_KEY_SECRET is missing",

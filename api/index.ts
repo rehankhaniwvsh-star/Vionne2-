@@ -24,9 +24,17 @@ const getTwilioClient = () => {
   return twilio(accountSid, authToken);
 };
 
+const RAZORPAY_DEFAULT_KEY_ID = "rzp_live_TlizK7xD4lJ68X";
+const RAZORPAY_DEFAULT_KEY_SECRET = "fBf2ttVuwwLs704tTksjy5DX";
+
+const getActiveRazorpayConfig = () => {
+  const keyId = (process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || RAZORPAY_DEFAULT_KEY_ID).trim();
+  const keySecret = (process.env.RAZORPAY_KEY_SECRET || RAZORPAY_DEFAULT_KEY_SECRET).trim();
+  return { keyId, keySecret };
+};
+
 const getRazorpayInstance = () => {
-  const keyId = process.env.RAZORPAY_KEY_ID;
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  const { keyId, keySecret } = getActiveRazorpayConfig();
   if (!keyId || !keySecret) return null;
   return new Razorpay({
     key_id: keyId,
@@ -36,16 +44,18 @@ const getRazorpayInstance = () => {
 
 // API routes go here
 app.get("/api/health", (req, res) => {
+  const { keyId, keySecret } = getActiveRazorpayConfig();
   res.json({ 
     status: "ok", 
     message: "Vionne Admin API is running on Vercel",
-    razorpayConfigured: Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET)
+    razorpayConfigured: Boolean(keyId && keySecret)
   });
 });
 
 app.get("/api/razorpay-config", (req, res) => {
+  const { keyId } = getActiveRazorpayConfig();
   res.json({
-    key_id: process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || "rzp_live_TlizK7xD4lJ68X",
+    key_id: keyId,
   });
 });
 
@@ -62,8 +72,7 @@ app.post("/api/create-order", async (req, res) => {
       return res.status(400).json({ error: "Amount must be at least 100 paise (₹1.00)" });
     }
 
-    const keyId = process.env.RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    const { keyId, keySecret } = getActiveRazorpayConfig();
 
     if (!keyId || !keySecret) {
       return res.status(401).json({ error: "Razorpay credentials not configured" });
@@ -115,7 +124,7 @@ app.post("/api/verify-payment", async (req, res) => {
       });
     }
 
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    const { keySecret } = getActiveRazorpayConfig();
     if (!keySecret) {
       return res.status(500).json({ error: "RAZORPAY_KEY_SECRET is missing", verified: false });
     }
