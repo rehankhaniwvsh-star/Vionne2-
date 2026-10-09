@@ -221,6 +221,11 @@ export const razorpayService = {
         escape: true,
         animation: true,
         backdropclose: false,
+        confirm_close: true,
+      },
+      retry: {
+        enabled: true,
+        max_count: 3,
       },
       handler: async (response: {
         razorpay_payment_id: string;
