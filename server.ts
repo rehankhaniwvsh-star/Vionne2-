@@ -32,8 +32,8 @@ async function startServer() {
     return twilio(accountSid, authToken);
   };
 
-  const RAZORPAY_DEFAULT_KEY_ID = "rzp_live_TlizK7xD4lJ68X";
-  const RAZORPAY_DEFAULT_KEY_SECRET = "fBf2ttVuwwLs704tTksjy5DX";
+  const RAZORPAY_DEFAULT_KEY_ID = "rzp_live_TlmsdNF35oZjgz";
+  const RAZORPAY_DEFAULT_KEY_SECRET = "oTBuq4fdCRmqQQX850N9Fsrf";
 
   const getActiveRazorpayConfig = () => {
     const keyId = (process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || RAZORPAY_DEFAULT_KEY_ID).trim();

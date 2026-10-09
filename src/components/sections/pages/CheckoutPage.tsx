@@ -17,7 +17,8 @@ import {
   Building,
   Wallet,
   Zap,
-  Info
+  Info,
+  ShoppingBag
 } from 'lucide-react';
 import { adminService } from '../../../services/adminService';
 import { razorpayService } from '../../../services/razorpayService';
@@ -510,6 +511,28 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({ onBack, onComplete }
             </div>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // EMPTY CART STATE
+  if (items.length === 0 && !isSuccess) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4 space-y-6 font-sans">
+        <div className="w-20 h-20 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-400">
+          <ShoppingBag size={38} />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-zinc-950">Your Cart is Empty</h1>
+          <p className="text-zinc-500 text-xs sm:text-sm max-w-sm">Please add items to your shopping bag before proceeding to checkout.</p>
+        </div>
+        <button
+          type="button"
+          onClick={onBack}
+          className="bg-[#0c2340] text-white px-8 py-3.5 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-[#14325a] transition-all shadow-md cursor-pointer"
+        >
+          Return to Store
+        </button>
       </div>
     );
   }

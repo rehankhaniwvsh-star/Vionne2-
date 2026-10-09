@@ -211,6 +211,88 @@ export function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="payments" className="space-y-6">
+          {/* Razorpay Standard Checkout Configuration Card */}
+          <Card className="border-[#0c2340]/30 bg-gradient-to-br from-[#0c2340]/[0.02] to-[#0c2340]/[0.08] backdrop-blur-sm rounded-2xl shadow-sm">
+            <CardHeader className="pb-3 border-b border-border/50">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-[#0c2340] flex items-center justify-center text-white shrink-0">
+                    <svg className="w-5 h-5 fill-current text-[#3395FF]" viewBox="0 0 24 24">
+                      <path d="M14.076 2.002H6.973L3 13.924h6.052l-2.074 8.074 14.022-12.022H14.95l2.126-7.974z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-bold uppercase tracking-widest text-[#0c2340]">
+                      Razorpay Standard Gateway
+                    </CardTitle>
+                    <CardDescription className="text-xs font-medium">
+                      Official Razorpay Web Checkout Integration
+                    </CardDescription>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                    <CheckCircle2 size={12} />
+                    Active &amp; Connected
+                  </span>
+                  <a
+                    href="https://dashboard.razorpay.com/#/app/keys"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#3395FF] hover:underline"
+                  >
+                    <span>Razorpay Dashboard</span>
+                    <ExternalLink size={12} />
+                  </a>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="viteRazorpayKeyId" className="text-[10px] font-bold uppercase tracking-widest opacity-60 ml-1">
+                    VITE_RAZORPAY_KEY_ID (Client Key)
+                  </Label>
+                  <span className="text-[10px] text-zinc-500 font-mono">
+                    Live Mode (rzp_live)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="viteRazorpayKeyId"
+                    readOnly
+                    value="rzp_live_TlmsdNF35oZjgz"
+                    className="rounded-xl bg-background border-border/50 h-11 font-mono text-xs font-bold text-zinc-900 select-all"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 px-4 rounded-xl text-xs font-bold"
+                    onClick={() => {
+                      navigator.clipboard.writeText('rzp_live_TlmsdNF35oZjgz');
+                      toast.success('Copied VITE_RAZORPAY_KEY_ID to clipboard');
+                    }}
+                  >
+                    Copy Key
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground ml-1">
+                  This public key initializes the Razorpay Standard Checkout modal on the frontend. The matching secret key (<code className="font-mono text-zinc-700 font-semibold">RAZORPAY_KEY_SECRET</code>) remains securely stored on the backend to verify HMAC-SHA256 signatures.
+                </p>
+              </div>
+
+              <div className="p-3 bg-muted/30 rounded-xl border border-border/40 text-[11px] text-muted-foreground space-y-1">
+                <p className="font-semibold text-zinc-800">Where to find your keys in Razorpay:</p>
+                <ol className="list-decimal list-inside space-y-0.5 text-zinc-600">
+                  <li>Log in to <strong className="text-zinc-800">dashboard.razorpay.com</strong>.</li>
+                  <li>Click on <strong className="text-zinc-800">Settings</strong> (or Developer Controls) in the sidebar.</li>
+                  <li>Select <strong className="text-zinc-800">API Keys</strong> to view your Key ID and generate Key Secrets.</li>
+                </ol>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="grid gap-6 lg:grid-cols-12">
             {/* Left Column: Form Settings (7 cols) */}
             <div className="lg:col-span-7 space-y-6">

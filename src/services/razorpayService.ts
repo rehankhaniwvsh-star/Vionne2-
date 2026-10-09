@@ -86,7 +86,7 @@ export const razorpayService = {
     } catch {
       // ignore network issue
     }
-    return (import.meta.env.VITE_RAZORPAY_KEY_ID as string) || 'rzp_live_TlizK7xD4lJ68X';
+    return (import.meta.env.VITE_RAZORPAY_KEY_ID as string) || 'rzp_live_TlmsdNF35oZjgz';
   },
 
   /**
@@ -100,26 +100,37 @@ export const razorpayService = {
     receipt?: string;
     notes?: Record<string, string>;
   }): Promise<RazorpayOrderResponse> {
-    const response = await fetch('/api/create-order', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        amount: params.amountPaise,
-        currency: params.currency || 'INR',
-        receipt: params.receipt,
-        notes: params.notes,
-      }),
-    });
+    const doFetch = async () => {
+      const response = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: params.amountPaise,
+          currency: params.currency || 'INR',
+          receipt: params.receipt,
+          notes: params.notes,
+        }),
+      });
 
-    const data = await response.json();
+      const data = await response.json();
+      return { ok: response.ok, status: response.status, data };
+    };
 
-    if (!response.ok) {
-      throw new Error(data.error || data.details || 'Failed to create Razorpay order');
+    let result = await doFetch();
+
+    // Auto-retry once on transient network or rate-limit responses
+    if (!result.ok && (result.status === 429 || result.status >= 500)) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      result = await doFetch();
     }
 
-    return data;
+    if (!result.ok) {
+      throw new Error(result.data.error || result.data.details || 'Failed to create Razorpay order');
+    }
+
+    return result.data;
   },
 
   /**
@@ -188,7 +199,7 @@ export const razorpayService = {
     const keyId =
       orderDataBackend.key_id ||
       (import.meta.env.VITE_RAZORPAY_KEY_ID as string) ||
-      'rzp_live_TlizK7xD4lJ68X';
+      'rzp_live_TlmsdNF35oZjgz';
 
     const options = {
       key: keyId,
