@@ -166,6 +166,11 @@ export function OrdersPage() {
                   </TableCell>
                   <TableCell className="py-4">
                     <div className="text-xs font-bold">{order.paymentMethod || 'Online'}</div>
+                    {order.razorpay?.paymentId && (
+                      <div className="font-mono text-[10px] text-blue-600 font-semibold mt-0.5">
+                        RZP: {order.razorpay.paymentId}
+                      </div>
+                    )}
                     {order.upiDetails?.utr && (
                       <div className="font-mono text-[10px] text-emerald-600 font-semibold mt-0.5">
                         UTR: {order.upiDetails.utr}

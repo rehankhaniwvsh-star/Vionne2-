@@ -1,6 +1,6 @@
 {
   "name": "Vionne — High-Conversion E-Commerce & Checkout",
-  "description": "High-conversion product storefront and streamlined checkout experience with direct UPI QR code and Cash on Delivery (COD) workflows.",
+  "description": "Luxury essentials with seamless Razorpay Standard Checkout supporting UPI, cards, netbanking, wallets, and Cash on Delivery.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

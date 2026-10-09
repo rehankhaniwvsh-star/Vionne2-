@@ -117,7 +117,7 @@ export const CartPage: React.FC<CartPageProps> = ({ onCheckout, onContinueShoppi
                 Free Nationwide Express Shipping on this order!
               </span>
               <span className="font-semibold text-[11px] text-emerald-800 hidden sm:inline">
-                Cash on Delivery & Instant UPI Accepted
+                Razorpay Standard Checkout &amp; Cash on Delivery Accepted
               </span>
             </div>
           </div>
