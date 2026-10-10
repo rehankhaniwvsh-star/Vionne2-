@@ -332,7 +332,8 @@ export const adminService = {
           ...item,
           price: parsePrice(item.price)
         })),
-        status: 'Pending',
+        status: order.status || (order.paymentStatus === 'PAID' ? 'Processing' : 'Pending'),
+        paymentStatus: order.paymentStatus || (order.paymentMethod?.includes('Razorpay') ? 'PAID' : 'Pending'),
         createdAt: Timestamp.now()
       };
       const orderRef = await addDoc(collection(db, 'orders'), orderData);

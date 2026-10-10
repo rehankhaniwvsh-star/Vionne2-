@@ -222,6 +222,17 @@ export const razorpayService = {
         color: '#0c2340', // Razorpay Navy Theme
         backdrop_color: 'rgba(12, 35, 64, 0.85)',
       },
+      config: {
+        display: {
+          hide: [
+            { method: 'emi' },
+            { method: 'paylater' },
+          ],
+          preferences: {
+            show_default_blocks: true,
+          },
+        },
+      },
       modal: {
         ondismiss: () => {
           console.log('Razorpay checkout modal dismissed by user');

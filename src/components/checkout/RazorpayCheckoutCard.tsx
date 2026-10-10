@@ -98,7 +98,7 @@ export const RazorpayCheckoutCard: React.FC<RazorpayCheckoutCardProps> = ({
             </div>
             <div className="min-w-0">
               <p className="text-xs font-bold text-zinc-900 truncate">Wallets</p>
-              <p className="text-[10px] text-zinc-500 truncate">Mobikwik, PayLater</p>
+              <p className="text-[10px] text-zinc-500 truncate">Mobikwik, Freecharge</p>
             </div>
           </div>
         </div>
