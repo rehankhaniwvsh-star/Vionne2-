@@ -87,7 +87,7 @@ service cloud.firestore {
       return data.customer is map &&
              data.items is list &&
              data.total is number && data.total >= 0 &&
-             data.status in ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'] &&
+             data.status in ['Draft', 'Pending', 'Processing', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'] &&
              (!('paymentMethod' in data) || (data.paymentMethod is string && data.paymentMethod.size() > 0 && data.paymentMethod.size() <= 100));
     }
 

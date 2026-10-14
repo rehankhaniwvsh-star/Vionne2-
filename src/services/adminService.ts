@@ -408,6 +408,116 @@ export const adminService = {
     }
   },
 
+  deleteOrder: async (id: string) => {
+    try {
+      const docRef = doc(db, 'orders', id);
+      await deleteDoc(docRef);
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, 'delete', `orders/${id}`);
+    }
+  },
+
+  bulkDeleteOrders: async (ids: string[]) => {
+    try {
+      if (!ids || ids.length === 0) return true;
+      const chunkSize = 400;
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        const chunk = ids.slice(i, i + chunkSize);
+        const batch = writeBatch(db);
+        chunk.forEach(id => {
+          batch.delete(doc(db, 'orders', id));
+        });
+        await batch.commit();
+      }
+      return true;
+    } catch (error) {
+      handleFirestoreError(error, 'delete', 'orders/bulk');
+    }
+  },
+
+  clearTestOrders: async () => {
+    try {
+      const snapshot = await getDocs(collection(db, 'orders'));
+      const testIds: string[] = [];
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const email = String(data.customer?.email || '').toLowerCase();
+        const name = String(data.customer?.name || '').toLowerCase();
+        const phone = String(data.customer?.phone || '');
+        const receipt = String(data.receipt || data.razorpay?.receipt || '').toLowerCase();
+
+        const isTest = 
+          email.includes('test') || 
+          email.includes('example.com') || 
+          email.includes('demo') ||
+          email.includes('fake') ||
+          name.includes('test') ||
+          name.includes('demo') ||
+          name.includes('fake') ||
+          name.includes('sample') ||
+          name === 'customer' ||
+          phone === '9999999999' ||
+          phone === '0000000000' ||
+          receipt.includes('test_') ||
+          data.isDemo === true ||
+          data.status === 'Draft';
+
+        if (isTest) {
+          testIds.push(docSnap.id);
+        }
+      });
+
+      if (testIds.length > 0) {
+        await adminService.bulkDeleteOrders(testIds);
+      }
+      return { count: testIds.length };
+    } catch (error) {
+      handleFirestoreError(error, 'delete', 'orders/clearTest');
+    }
+  },
+
+  clearAllOrders: async () => {
+    try {
+      const snapshot = await getDocs(collection(db, 'orders'));
+      const allIds: string[] = [];
+      snapshot.forEach(docSnap => {
+        allIds.push(docSnap.id);
+      });
+      if (allIds.length > 0) {
+        await adminService.bulkDeleteOrders(allIds);
+      }
+      return { count: allIds.length };
+    } catch (error) {
+      handleFirestoreError(error, 'delete', 'orders/clearAll');
+    }
+  },
+
+  createDraftOrder: async (draftData: any) => {
+    try {
+      const shortId = Math.floor(100000 + Math.random() * 900000).toString();
+      const orderData = {
+        ...draftData,
+        shortId,
+        total: parsePrice(draftData.total),
+        items: (draftData.items || []).map((item: any) => ({
+          ...item,
+          price: parsePrice(item.price),
+          quantity: Number(item.quantity) || 1,
+        })),
+        status: draftData.status || 'Draft',
+        paymentStatus: draftData.paymentStatus || 'Pending',
+        paymentMethod: draftData.paymentMethod || 'Manual Draft',
+        isDraft: true,
+        createdAt: Timestamp.now()
+      };
+      const orderRef = await addDoc(collection(db, 'orders'), orderData);
+      return { id: orderRef.id, shortId };
+    } catch (error) {
+      handleFirestoreError(error, 'create', 'orders/draft');
+    }
+  },
+
   getOrderByTrackingId: async (orderId: string, email: string) => {
     try {
       const docRef = doc(db, 'orders', orderId);
