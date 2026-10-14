@@ -41,10 +41,29 @@ import {
 import { adminService } from '../../../services/adminService';
 import { INITIAL_PRODUCTS } from '../../../data/mockProducts';
 
+function cleanHtmlText(text?: string): string {
+  if (!text) return '';
+  return text
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<p[^>]*>/gi, '')
+    .replace(/<[^>]+>/g, '') // strip all other HTML tags
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\r\n/g, '\n')
+    .replace(/\n\s*\n\s*\n+/g, '\n\n')
+    .trim();
+}
+
 export const ProductPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
+  const [storeProducts, setStoreProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState<string>('');
   const [activeImage, setActiveImage] = useState(0);
@@ -101,6 +120,23 @@ export const ProductPage: React.FC = () => {
     };
     fetchProduct();
   }, [id]);
+
+  // Load real store products for recommendations
+  useEffect(() => {
+    const unsub = adminService.getProducts((fetched) => {
+      if (fetched && fetched.length > 0) {
+        setStoreProducts(fetched as Product[]);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // Filter recommendations to show ONLY real already added products from Firestore
+  const suggestedProducts = useMemo(() => {
+    return storeProducts
+      .filter(p => p.id !== product?.id && p.status !== 'Draft' && p.status !== 'Archived')
+      .slice(0, 4);
+  }, [storeProducts, product?.id]);
 
   // Sticky Buy Bar scroll detector
   useEffect(() => {
@@ -164,20 +200,30 @@ export const ProductPage: React.FC = () => {
 
   const parsedDescription = useMemo(() => {
     if (!product?.description) return null;
-    const lines = product.description.split('\n').map(l => l.trim()).filter(Boolean);
+    const cleanText = cleanHtmlText(product.description);
+    const lines = cleanText.split('\n').map(l => l.trim()).filter(Boolean);
     const introLines: string[] = [];
     const bullets: { title?: string; body: string }[] = [];
     const extractedSpecs: { label: string; value: string }[] = [];
 
     let inBullets = false;
     for (const line of lines) {
-      const isBullet = line.startsWith('•') || line.startsWith('-') || line.startsWith('*') || /^\d+[\.\)]\s/.test(line);
+      const isBullet = 
+        line.startsWith('•') || 
+        line.startsWith('-') || 
+        line.startsWith('*') || 
+        line.startsWith('✅') ||
+        line.startsWith('💡') ||
+        line.startsWith('🎁') ||
+        line.startsWith('🔋') ||
+        /^\d+[\.\)]\s/.test(line);
+
       if (isBullet) {
         inBullets = true;
-        const cleanLine = line.replace(/^(?:[•\-*]|\d+[\.\)])\s*/, '').trim();
+        const cleanLine = line.replace(/^(?:[•\-*✅💡🎁🔋]|\d+[\.\)])\s*/, '').trim();
 
-        // Extract spec-like lines (e.g. "Country of Origin: India", "Material: Glass")
-        const specMatch = cleanLine.match(/^(Country of Origin|Material|Product Dimensions|Dimensions|Net Quantity|Package Contains|Capacity|Power Input|Battery Life|Origin|Weight|Warranty):\s*(.+)$/i);
+        // Extract spec-like lines
+        const specMatch = cleanLine.match(/^(Country of Origin|Material|Product Dimensions|Dimensions|Net Quantity|Package Contains|Capacity|Power Input|Battery Life|Origin|Weight|Warranty|Power|Light Type|Size|Includes):\s*(.+)$/i);
         if (specMatch) {
           extractedSpecs.push({ label: specMatch[1].trim(), value: specMatch[2].trim() });
         }
@@ -209,7 +255,8 @@ export const ProductPage: React.FC = () => {
     return {
       intro: introLines.join(' '),
       bullets,
-      extractedSpecs
+      extractedSpecs,
+      cleanText
     };
   }, [product?.description]);
 
@@ -713,10 +760,10 @@ export const ProductPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Fallback for raw description if neither intro nor bullets parsed */}
-              {!parsedDescription?.intro && !parsedDescription?.bullets?.length && product.description && (
+              {/* Clean text description if neither intro nor bullets parsed */}
+              {!parsedDescription?.intro && !parsedDescription?.bullets?.length && parsedDescription?.cleanText && (
                 <p className="text-zinc-700 leading-relaxed whitespace-pre-line text-xs">
-                  {product.description}
+                  {parsedDescription.cleanText}
                 </p>
               )}
 
@@ -871,64 +918,78 @@ export const ProductPage: React.FC = () => {
           </div>
         </div>
 
-        {/* "You may also like" Section matching screenshot */}
-        <div className="mt-24 pt-12 border-t border-zinc-200">
-          <div className="text-center mb-10">
-            <h3 className="text-2xl md:text-3xl font-serif font-normal text-zinc-900">
-              You may also like
-            </h3>
-          </div>
+        {/* "You may also like" Section - Only real already added products from Firestore */}
+        {suggestedProducts.length > 0 && (
+          <div className="mt-20 pt-12 border-t border-zinc-200">
+            <div className="text-center mb-10">
+              <h3 className="text-2xl md:text-3xl font-serif font-normal text-zinc-900">
+                You may also like
+              </h3>
+              <p className="text-xs text-zinc-500 mt-1 font-light">
+                Recommended products from our store
+              </p>
+            </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-8">
-            {INITIAL_PRODUCTS.filter(p => p.id !== product.id).slice(0, 4).map((related) => {
-              const relPrice = Number(related.price) || 449;
-              const relOrig = related.originalPrice || Math.round(relPrice * 1.6);
-              return (
-                <div 
-                  key={related.id}
-                  onClick={() => {
-                    navigate(`/product/${related.id}`);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="group cursor-pointer flex flex-col"
-                >
-                  <div className="relative aspect-square rounded-xl overflow-hidden bg-zinc-100 mb-3">
-                    <img 
-                      src={related.image || (related.images && related.images[0])} 
-                      alt={related.title}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                    <div className="absolute top-3 right-3 z-10">
-                      <span className="bg-[#8f9e83] text-white text-[10px] font-medium px-2 py-0.5 rounded-full shadow-xs">
-                        Sale
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <span className="text-[11px] text-zinc-400 font-light block">
-                      {related.category}
-                    </span>
-                    <h4 className="text-xs sm:text-sm font-normal text-zinc-900 line-clamp-2 leading-snug group-hover:text-zinc-600 transition-colors">
-                      {related.title}
-                    </h4>
-                    <div className="flex items-baseline space-x-2 pt-1">
-                      <span className="text-xs sm:text-sm font-medium text-zinc-900">
-                        Rs. {relPrice.toLocaleString('en-IN')}.00
-                      </span>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-8">
+              {suggestedProducts.map((related) => {
+                const relPrice = Number(related.price) || 299;
+                const relOrig = related.originalPrice || Math.round(relPrice * 1.5);
+                const relImg = related.image || (related.images && related.images[0]) || '';
+                return (
+                  <div 
+                    key={related.id}
+                    onClick={() => {
+                      navigate(`/product/${related.id}`);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="group cursor-pointer flex flex-col"
+                  >
+                    <div className="relative aspect-square rounded-2xl overflow-hidden bg-zinc-100 mb-3 border border-zinc-200/60 shadow-2xs">
+                      {relImg ? (
+                        <img 
+                          src={relImg} 
+                          alt={related.title}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-zinc-400 bg-zinc-50">
+                          <Package size={24} />
+                        </div>
+                      )}
                       {relOrig > relPrice && (
-                        <span className="text-[11px] text-zinc-400 line-through font-light">
-                          Rs. {relOrig.toLocaleString('en-IN')}.00
-                        </span>
+                        <div className="absolute top-3 right-3 z-10">
+                          <span className="bg-[#8f9e83] text-white text-[10px] font-medium px-2 py-0.5 rounded-full shadow-xs">
+                            Sale
+                          </span>
+                        </div>
                       )}
                     </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[11px] text-zinc-400 font-light block">
+                        {related.category || 'Collection'}
+                      </span>
+                      <h4 className="text-xs sm:text-sm font-normal text-zinc-900 line-clamp-2 leading-snug group-hover:text-zinc-600 transition-colors">
+                        {related.title}
+                      </h4>
+                      <div className="flex items-baseline space-x-2 pt-1">
+                        <span className="text-xs sm:text-sm font-semibold text-zinc-900">
+                          Rs. {relPrice.toLocaleString('en-IN')}.00
+                        </span>
+                        {relOrig > relPrice && (
+                          <span className="text-[11px] text-zinc-400 line-through font-light">
+                            Rs. {relOrig.toLocaleString('en-IN')}.00
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Detailed Tabs Navigation (Specs, Box, Reviews, FAQs) */}
         <div id="details-section" className="mt-20 pt-10 border-t border-zinc-200">
@@ -1031,12 +1092,6 @@ export const ProductPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Fallback if no bullets: raw description */}
-              {(!parsedDescription?.bullets || parsedDescription.bullets.length === 0) && product.description && (
-                <div className="p-6 bg-zinc-50 rounded-2xl border border-zinc-200/80 text-sm text-zinc-700 leading-relaxed whitespace-pre-line">
-                  {product.description}
-                </div>
-              )}
 
               {/* Quality & Assurance Ribbon */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
