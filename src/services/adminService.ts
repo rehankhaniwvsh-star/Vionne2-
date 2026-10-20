@@ -65,7 +65,7 @@ const getFallbackProduct = (id?: string, title?: string): Partial<Product> => {
 export const adminService = {
   // Products
   getProducts: (callback: (products: any[]) => void, onError?: (error: any) => void) => {
-    const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
+    const q = collection(db, 'products');
     return onSnapshot(q, (snapshot) => {
       if (snapshot.empty) {
         // Fallback to initial products if firestore is empty
@@ -100,14 +100,23 @@ export const adminService = {
           specs: data.specs || fallback.specs || [],
           boxItems: data.boxItems || fallback.boxItems || [],
           faqs: data.faqs || fallback.faqs || [],
-          reviews: data.reviews || fallback.reviews || [],
+          reviews: Array.isArray(data.reviews) ? data.reviews : [],
           bundles: data.bundles || fallback.bundles || [],
           ...data,
+          createdAt: data.createdAt || (fallback as any)?.createdAt || null,
           price: parsePrice(data.price) || fallback.price || 1299,
           images,
           image: data.image || images[0] || fallback.image || 'https://images.unsplash.com/photo-1624222247344-550fb8ecf7db?w=800'
         };
       });
+
+      // Sort by createdAt descending, gracefully handling any missing/undefined timestamps
+      products.sort((a: any, b: any) => {
+        const timeA = a.createdAt?.seconds || (a.createdAt?.toDate ? a.createdAt.toDate().getTime() / 1000 : 0);
+        const timeB = b.createdAt?.seconds || (b.createdAt?.toDate ? b.createdAt.toDate().getTime() / 1000 : 0);
+        return timeB - timeA;
+      });
+
       callback(products);
     }, (error) => {
       console.warn('Firestore products fetch issue, falling back to mock products:', error);
@@ -291,7 +300,7 @@ export const adminService = {
           specs: data.specs || fallback.specs || [],
           boxItems: data.boxItems || fallback.boxItems || [],
           faqs: data.faqs || fallback.faqs || [],
-          reviews: data.reviews || fallback.reviews || [],
+          reviews: Array.isArray(data.reviews) ? data.reviews : [],
           bundles: data.bundles || fallback.bundles || [],
           ...data,
           price: parsePrice(data.price) || fallback.price || 1299,

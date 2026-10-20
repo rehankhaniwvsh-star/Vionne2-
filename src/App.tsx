@@ -11,7 +11,6 @@ import { Footer } from './components/layout/Footer';
 import { Hero } from './components/sections/Hero';
 import { FeaturedProducts } from './components/sections/FeaturedProducts';
 import { Benefits } from './components/sections/Benefits';
-import { Testimonials } from './components/sections/Testimonials';
 import { ProductPage } from './components/sections/pages/ProductPage';
 import { CartPage } from './components/sections/pages/CartPage';
 import { CheckoutPage } from './components/sections/pages/CheckoutPage';
@@ -151,7 +150,6 @@ function AppRoutes() {
           <Hero onShopNow={() => document.getElementById('featured-products')?.scrollIntoView({ behavior: 'smooth' })} />
           <Benefits />
           <FeaturedProducts onProductClick={(p) => navigate(`/product/${p.id}`)} />
-          <Testimonials />
           <section className="py-24 bg-black text-white text-center">
             <div className="container mx-auto px-4">
               <h2 className="text-4xl font-serif mb-8">Join the Vionne Circle</h2>
